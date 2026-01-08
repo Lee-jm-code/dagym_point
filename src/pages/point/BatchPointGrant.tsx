@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Filter, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Filter, Send, CheckCircle } from 'lucide-react';
 import type { MemberFilter } from '../../types/point';
 import './BatchPointGrant.css';
 
