@@ -1,7 +1,57 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Coins, Gift, ShoppingCart, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Coins, Gift, ShoppingCart, Clock, Calendar, RotateCcw } from 'lucide-react';
 import type { PointStats, PointTransaction } from '../../types/point';
 import './PointDashboard.css';
+
+type DateFilterType = 'thisMonth' | 'lastMonth' | 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisYear' | 'lastYear' | 'custom';
+
+const getDateRange = (filterType: DateFilterType): { start: Date; end: Date } => {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  switch (filterType) {
+    case 'today':
+      return { start: today, end: today };
+    case 'yesterday':
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return { start: yesterday, end: yesterday };
+    case 'thisWeek':
+      const thisWeekStart = new Date(today);
+      thisWeekStart.setDate(today.getDate() - today.getDay());
+      return { start: thisWeekStart, end: today };
+    case 'lastWeek':
+      const lastWeekEnd = new Date(today);
+      lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+      const lastWeekStart = new Date(lastWeekEnd);
+      lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+      return { start: lastWeekStart, end: lastWeekEnd };
+    case 'thisMonth':
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
+    case 'lastMonth':
+      return { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 0) };
+    case 'thisYear':
+      return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
+    case 'lastYear':
+      return { start: new Date(now.getFullYear() - 1, 0, 1), end: new Date(now.getFullYear() - 1, 11, 31) };
+    default:
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
+  }
+};
+
+const formatDateDisplay = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}.${month}.${day}`;
+};
+
+const formatDateInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // 샘플 데이터
 const mockStats: PointStats = {
@@ -30,6 +80,27 @@ const formatNumber = (num: number) => {
 const PointDashboard = () => {
   const [stats] = useState<PointStats>(mockStats);
   const [transactions] = useState<PointTransaction[]>(mockTransactions);
+  const [dateFilter, setDateFilter] = useState<DateFilterType>('thisMonth');
+  const [dateRange, setDateRange] = useState(getDateRange('thisMonth'));
+
+  const handleFilterChange = (filterType: DateFilterType) => {
+    setDateFilter(filterType);
+    setDateRange(getDateRange(filterType));
+  };
+
+  const handleDateChange = (type: 'start' | 'end', value: string) => {
+    const newDate = new Date(value);
+    setDateFilter('custom');
+    setDateRange(prev => ({
+      ...prev,
+      [type]: newDate
+    }));
+  };
+
+  const handleReset = () => {
+    setDateFilter('thisMonth');
+    setDateRange(getDateRange('thisMonth'));
+  };
 
   return (
     <div className="point-dashboard">
@@ -101,8 +172,8 @@ const PointDashboard = () => {
         </div>
       </div>
 
-      {/* 이번 달 요약 */}
-      <div className="monthly-summary">
+      {/* 이번 달 요약 + 날짜 필터 */}
+      <div className="summary-filter-row">
         <div className="summary-card">
           <h3 className="summary-title">이번 달 현황</h3>
           <div className="summary-items">
@@ -120,6 +191,82 @@ const PointDashboard = () => {
               <span className="summary-label">순 발행</span>
               <span className="summary-value net">+{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
             </div>
+          </div>
+        </div>
+
+        <div className="date-filter-card">
+          <div className="date-range-picker">
+            <Calendar size={18} className="calendar-icon" />
+            <input
+              type="date"
+              className="date-input"
+              value={formatDateInput(dateRange.start)}
+              onChange={(e) => handleDateChange('start', e.target.value)}
+            />
+            <span className="date-separator">~</span>
+            <input
+              type="date"
+              className="date-input"
+              value={formatDateInput(dateRange.end)}
+              onChange={(e) => handleDateChange('end', e.target.value)}
+            />
+          </div>
+          <div className="filter-buttons">
+            <button 
+              className={`filter-btn ${dateFilter === 'thisMonth' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('thisMonth')}
+            >
+              이번 달
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'lastMonth' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('lastMonth')}
+            >
+              지난 달
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'today' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('today')}
+            >
+              오늘
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'yesterday' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('yesterday')}
+            >
+              어제
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'thisWeek' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('thisWeek')}
+            >
+              이번 주
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'lastWeek' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('lastWeek')}
+            >
+              지난 주
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'thisYear' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('thisYear')}
+            >
+              올해
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'lastYear' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('lastYear')}
+            >
+              작년
+            </button>
+            <button 
+              className="filter-btn reset"
+              onClick={handleReset}
+            >
+              <RotateCcw size={14} />
+              필터 초기화
+            </button>
           </div>
         </div>
       </div>
