@@ -173,103 +173,104 @@ const PointDashboard = () => {
         </div>
       </div>
 
-      {/* 이번 달 현황 + 날짜 필터 통합 */}
-      <div className="summary-card-full">
-        {/* 상단: 제목 + 날짜 선택 + 필터 버튼 */}
-        <div className="summary-top-row">
-          <h3 className="summary-title">이번 달 현황</h3>
-          <div className="date-filter-row">
-            <div className="date-range-picker">
-              <Calendar size={18} className="calendar-icon" />
-              <input
-                type="date"
-                className="date-input"
-                value={formatDateInput(dateRange.start)}
-                onChange={(e) => handleDateChange('start', e.target.value)}
-              />
-              <span className="date-separator">~</span>
-              <input
-                type="date"
-                className="date-input"
-                value={formatDateInput(dateRange.end)}
-                onChange={(e) => handleDateChange('end', e.target.value)}
-              />
-            </div>
-            <div className="filter-buttons">
-              <button 
-                className={`filter-btn ${dateFilter === 'thisMonth' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('thisMonth')}
-              >
-                이번 달
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'lastMonth' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('lastMonth')}
-              >
-                지난 달
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'today' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('today')}
-              >
-                오늘
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'yesterday' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('yesterday')}
-              >
-                어제
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'thisWeek' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('thisWeek')}
-              >
-                이번 주
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'lastWeek' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('lastWeek')}
-              >
-                지난 주
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'thisYear' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('thisYear')}
-              >
-                올해
-              </button>
-              <button 
-                className={`filter-btn ${dateFilter === 'lastYear' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('lastYear')}
-              >
-                작년
-              </button>
-              <button 
-                className="filter-btn reset"
-                onClick={handleReset}
-              >
-                <RotateCcw size={14} />
-                필터 초기화
-              </button>
-            </div>
+      {/* 날짜 필터 + 포인트 현황 */}
+      <div className="filter-summary-card">
+        {/* 첫 번째 줄: 날짜 선택 */}
+        <div className="filter-row-1">
+          <div className="date-range-picker">
+            <Calendar size={18} className="calendar-icon" />
+            <input
+              type="date"
+              className="date-input"
+              value={formatDateInput(dateRange.start)}
+              onChange={(e) => handleDateChange('start', e.target.value)}
+            />
+            <span className="date-separator">~</span>
+            <input
+              type="date"
+              className="date-input"
+              value={formatDateInput(dateRange.end)}
+              onChange={(e) => handleDateChange('end', e.target.value)}
+            />
           </div>
         </div>
 
-        {/* 하단: 발행, 사용, 순 발행 */}
-        <div className="summary-items">
-          <div className="summary-item">
-            <span className="summary-label">발행</span>
-            <span className="summary-value earn">+{formatNumber(stats.monthlyIssued)}P</span>
+        {/* 두 번째 줄: 필터 버튼들 */}
+        <div className="filter-row-2">
+          <div className="filter-buttons">
+            <button 
+              className={`filter-btn ${dateFilter === 'thisMonth' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('thisMonth')}
+            >
+              이번 달
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'lastMonth' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('lastMonth')}
+            >
+              지난 달
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'today' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('today')}
+            >
+              오늘
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'yesterday' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('yesterday')}
+            >
+              어제
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'thisWeek' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('thisWeek')}
+            >
+              이번 주
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'lastWeek' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('lastWeek')}
+            >
+              지난 주
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'thisYear' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('thisYear')}
+            >
+              올해
+            </button>
+            <button 
+              className={`filter-btn ${dateFilter === 'lastYear' ? 'active' : ''}`}
+              onClick={() => handleFilterChange('lastYear')}
+            >
+              작년
+            </button>
           </div>
-          <div className="summary-divider" />
-          <div className="summary-item">
-            <span className="summary-label">사용</span>
-            <span className="summary-value use">-{formatNumber(stats.monthlyUsed)}P</span>
+          <button 
+            className="filter-btn reset"
+            onClick={handleReset}
+          >
+            <RotateCcw size={14} />
+            필터 초기화
+          </button>
+        </div>
+
+        {/* 세 번째 줄: 포인트 현황 */}
+        <div className="filter-row-3">
+          <div className="point-stat-item">
+            <span className="point-stat-label">발행 포인트</span>
+            <span className="point-stat-value earn">{formatNumber(stats.monthlyIssued)}P</span>
           </div>
-          <div className="summary-divider" />
-          <div className="summary-item">
-            <span className="summary-label">순 발행</span>
-            <span className="summary-value net">+{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
+          <div className="point-stat-divider" />
+          <div className="point-stat-item">
+            <span className="point-stat-label">사용 포인트</span>
+            <span className="point-stat-value use">{formatNumber(stats.monthlyUsed)}P</span>
+          </div>
+          <div className="point-stat-divider" />
+          <div className="point-stat-item">
+            <span className="point-stat-label">미사용 포인트</span>
+            <span className="point-stat-value balance">{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
           </div>
         </div>
       </div>
