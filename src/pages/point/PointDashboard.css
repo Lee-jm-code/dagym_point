@@ -99,33 +99,29 @@
   color: #1a1a2e;
 }
 
-/* 이번 달 요약 + 날짜 필터 */
-.summary-filter-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 24px;
-  align-items: stretch;
-}
-
-.summary-card {
+/* 이번 달 현황 + 날짜 필터 통합 */
+.summary-card-full {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 16px;
   padding: 24px;
   color: white;
-  flex-shrink: 0;
+  margin-bottom: 24px;
 }
 
-/* 날짜 필터 카드 */
-.date-filter-card {
-  flex: 1;
-  background: white;
-  border-radius: 16px;
-  padding: 20px 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.date-filter-inline {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 16px;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .date-range-picker {
@@ -135,27 +131,31 @@
 }
 
 .calendar-icon {
-  color: #666;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .date-input {
   padding: 10px 14px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   font-size: 14px;
-  color: #333;
-  background: #fafafa;
+  color: white;
+  background: rgba(255, 255, 255, 0.15);
   cursor: pointer;
 }
 
 .date-input:focus {
   outline: none;
-  border-color: #6366f1;
-  background: white;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
 }
 
 .date-separator {
-  color: #999;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
@@ -167,40 +167,42 @@
 
 .filter-btn {
   padding: 8px 16px;
-  border: 1px solid #e5e7eb;
-  background: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   font-size: 13px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
 
 .filter-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .filter-btn.active {
-  background: #6366f1;
-  border-color: #6366f1;
-  color: white;
+  background: white;
+  border-color: white;
+  color: #6366f1;
+  font-weight: 600;
 }
 
 .filter-btn.reset {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #f5f5f5;
-  border-color: #e5e7eb;
-  color: #666;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .filter-btn.reset:hover {
-  background: #e5e5e5;
-  border-color: #d1d5db;
-  color: #333;
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
 }
 
 .summary-title {
@@ -380,8 +382,14 @@
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .summary-filter-row {
+  .summary-header {
     flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .date-filter-inline {
+    align-items: flex-start;
+    width: 100%;
   }
 }
 
