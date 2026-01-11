@@ -251,8 +251,8 @@
   background: #e5e7eb;
 }
 
-/* 최근 활동 */
-.recent-activity {
+/* 포인트 활동 */
+.point-activity {
   background: white;
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -383,6 +383,83 @@
   font-size: 13px;
 }
 
+/* 페이지네이션 */
+.pagination-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.rows-per-page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rows-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.rows-select {
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: white;
+  cursor: pointer;
+}
+
+.rows-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.page-btn.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+  font-weight: 600;
+}
+
+.page-btn.nav {
+  color: #999;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* 반응형 */
 @media (max-width: 1024px) {
   .stats-grid {
@@ -432,6 +509,17 @@
   
   .point-stat-value {
     font-size: 24px;
+  }
+  
+  .pagination-wrapper {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .page-btn {
+    min-width: 32px;
+    height: 32px;
+    font-size: 13px;
   }
 }
 

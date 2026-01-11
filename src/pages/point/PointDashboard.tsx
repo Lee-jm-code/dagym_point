@@ -83,6 +83,10 @@ const PointDashboard = () => {
   const [transactions] = useState<PointTransaction[]>(mockTransactions);
   const [dateFilter, setDateFilter] = useState<DateFilterType>('thisMonth');
   const [dateRange, setDateRange] = useState(getDateRange('thisMonth'));
+  
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const handleFilterChange = (filterType: DateFilterType) => {
     setDateFilter(filterType);
@@ -101,6 +105,26 @@ const PointDashboard = () => {
   const handleReset = () => {
     setDateFilter('thisMonth');
     setDateRange(getDateRange('thisMonth'));
+  };
+
+  // 시간순 정렬 (최신순)
+  const sortedTransactions = [...transactions].sort((a, b) => 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(sortedTransactions.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const currentTransactions = sortedTransactions.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleRowsPerPageChange = (rows: number) => {
+    setRowsPerPage(rows);
+    setCurrentPage(1); // 행 수 변경 시 첫 페이지로 이동
   };
 
   return (
@@ -275,11 +299,10 @@ const PointDashboard = () => {
         </div>
       </div>
 
-      {/* 최근 포인트 활동 */}
-      <div className="recent-activity">
+      {/* 포인트 활동 */}
+      <div className="point-activity">
         <div className="activity-header">
-          <h2 className="section-title">최근 포인트 활동</h2>
-          <button className="view-all-btn">전체보기</button>
+          <h2 className="section-title">포인트 활동</h2>
         </div>
         
         <div className="activity-table-wrapper">
@@ -295,7 +318,7 @@ const PointDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {transactions.map(tx => (
+              {currentTransactions.map(tx => (
                 <tr key={tx.id}>
                   <td className="member-name">{tx.memberName}</td>
                   <td>
@@ -313,6 +336,51 @@ const PointDashboard = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* 페이지네이션 */}
+        <div className="pagination-wrapper">
+          <div className="rows-per-page">
+            <span className="rows-label">행 표시:</span>
+            <select 
+              className="rows-select"
+              value={rowsPerPage}
+              onChange={(e) => handleRowsPerPageChange(Number(e.target.value))}
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+            </select>
+          </div>
+
+          <div className="pagination">
+            <button 
+              className="page-btn nav"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              &lt;
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                className={`page-btn ${currentPage === page ? 'active' : ''}`}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </button>
+            ))}
+            <button 
+              className="page-btn nav"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              &gt;
+            </button>
+          </div>
         </div>
       </div>
     </div>
