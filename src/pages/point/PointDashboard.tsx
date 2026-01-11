@@ -9,6 +9,10 @@ const getDateRange = (filterType: DateFilterType): { start: Date; end: Date } =>
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
+  // 월요일 기준 요일 계산 (월=0, 화=1, ..., 일=6)
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 일요일이면 -6, 아니면 1-요일
+  
   switch (filterType) {
     case 'today':
       return { start: today, end: today };
@@ -17,15 +21,19 @@ const getDateRange = (filterType: DateFilterType): { start: Date; end: Date } =>
       yesterday.setDate(yesterday.getDate() - 1);
       return { start: yesterday, end: yesterday };
     case 'thisWeek':
-      const thisWeekStart = new Date(today);
-      thisWeekStart.setDate(today.getDate() - today.getDay());
-      return { start: thisWeekStart, end: today };
+      // 이번 주 월요일 ~ 일요일
+      const thisWeekMonday = new Date(today);
+      thisWeekMonday.setDate(today.getDate() + mondayOffset);
+      const thisWeekSunday = new Date(thisWeekMonday);
+      thisWeekSunday.setDate(thisWeekMonday.getDate() + 6);
+      return { start: thisWeekMonday, end: thisWeekSunday };
     case 'lastWeek':
-      const lastWeekEnd = new Date(today);
-      lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
-      const lastWeekStart = new Date(lastWeekEnd);
-      lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
-      return { start: lastWeekStart, end: lastWeekEnd };
+      // 지난 주 월요일 ~ 일요일
+      const lastWeekMonday = new Date(today);
+      lastWeekMonday.setDate(today.getDate() + mondayOffset - 7);
+      const lastWeekSunday = new Date(lastWeekMonday);
+      lastWeekSunday.setDate(lastWeekMonday.getDate() + 6);
+      return { start: lastWeekMonday, end: lastWeekSunday };
     case 'thisMonth':
       return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0) };
     case 'lastMonth':
@@ -176,7 +184,30 @@ const PointDashboard = () => {
       <div className="summary-card-full">
         <div className="summary-header">
           <h3 className="summary-title">이번 달 현황</h3>
-          <div className="date-filter-inline">
+        </div>
+        <div className="summary-content">
+          {/* 왼쪽: 발행, 사용, 순 발행 */}
+          <div className="summary-left">
+            <div className="summary-items">
+              <div className="summary-item">
+                <span className="summary-label">발행</span>
+                <span className="summary-value earn">+{formatNumber(stats.monthlyIssued)}P</span>
+              </div>
+              <div className="summary-divider" />
+              <div className="summary-item">
+                <span className="summary-label">사용</span>
+                <span className="summary-value use">-{formatNumber(stats.monthlyUsed)}P</span>
+              </div>
+              <div className="summary-divider" />
+              <div className="summary-item">
+                <span className="summary-label">순 발행</span>
+                <span className="summary-value net">+{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 오른쪽: 날짜 필터 */}
+          <div className="summary-right">
             <div className="date-range-picker">
               <Calendar size={18} className="calendar-icon" />
               <input
@@ -250,22 +281,6 @@ const PointDashboard = () => {
                 필터 초기화
               </button>
             </div>
-          </div>
-        </div>
-        <div className="summary-items">
-          <div className="summary-item">
-            <span className="summary-label">발행</span>
-            <span className="summary-value earn">+{formatNumber(stats.monthlyIssued)}P</span>
-          </div>
-          <div className="summary-divider" />
-          <div className="summary-item">
-            <span className="summary-label">사용</span>
-            <span className="summary-value use">-{formatNumber(stats.monthlyUsed)}P</span>
-          </div>
-          <div className="summary-divider" />
-          <div className="summary-item">
-            <span className="summary-label">순 발행</span>
-            <span className="summary-value net">+{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
           </div>
         </div>
       </div>

@@ -103,24 +103,30 @@
 .summary-card-full {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border-radius: 16px;
-  padding: 24px;
+  padding: 24px 28px;
   color: white;
   margin-bottom: 24px;
 }
 
 .summary-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  gap: 20px;
-  flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
-.date-filter-inline {
+.summary-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+}
+
+.summary-left {
+  flex-shrink: 0;
+}
+
+.summary-right {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   align-items: flex-end;
 }
 
@@ -128,81 +134,87 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 10px 16px;
+  border-radius: 10px;
 }
 
 .calendar-icon {
-  color: rgba(255, 255, 255, 0.8);
+  color: white;
 }
 
 .date-input {
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   color: white;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   cursor: pointer;
 }
 
 .date-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.25);
+  border-color: white;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .date-input::-webkit-calendar-picker-indicator {
   filter: invert(1);
+  cursor: pointer;
 }
 
 .date-separator {
-  color: rgba(255, 255, 255, 0.7);
+  color: white;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .filter-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .filter-btn {
-  padding: 8px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  padding: 9px 18px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 22px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
 
 .filter-btn:hover {
-  border-color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  border-color: white;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .filter-btn.active {
   background: white;
   border-color: white;
   color: #6366f1;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .filter-btn.reset {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .filter-btn.reset:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
-  color: white;
+  background: rgba(255, 255, 255, 0.35);
+  border-color: white;
 }
 
 .summary-title {
@@ -382,14 +394,19 @@
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .summary-header {
+  .summary-content {
     flex-direction: column;
     align-items: flex-start;
+    gap: 24px;
   }
   
-  .date-filter-inline {
+  .summary-right {
     align-items: flex-start;
     width: 100%;
+  }
+  
+  .filter-buttons {
+    justify-content: flex-start;
   }
 }
 
@@ -410,6 +427,8 @@
   
   .date-range-picker {
     flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-start;
   }
   
   .filter-buttons {
@@ -417,8 +436,8 @@
   }
   
   .filter-btn {
-    padding: 6px 12px;
-    font-size: 12px;
+    padding: 7px 14px;
+    font-size: 13px;
   }
 }
 
