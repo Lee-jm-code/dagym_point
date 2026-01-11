@@ -175,32 +175,10 @@ const PointDashboard = () => {
 
       {/* 이번 달 현황 + 날짜 필터 통합 */}
       <div className="summary-card-full">
-        <div className="summary-header">
+        {/* 상단: 제목 + 날짜 선택 + 필터 버튼 */}
+        <div className="summary-top-row">
           <h3 className="summary-title">이번 달 현황</h3>
-        </div>
-        <div className="summary-content">
-          {/* 왼쪽: 발행, 사용, 순 발행 */}
-          <div className="summary-left">
-            <div className="summary-items">
-              <div className="summary-item">
-                <span className="summary-label">발행</span>
-                <span className="summary-value earn">+{formatNumber(stats.monthlyIssued)}P</span>
-              </div>
-              <div className="summary-divider" />
-              <div className="summary-item">
-                <span className="summary-label">사용</span>
-                <span className="summary-value use">-{formatNumber(stats.monthlyUsed)}P</span>
-              </div>
-              <div className="summary-divider" />
-              <div className="summary-item">
-                <span className="summary-label">순 발행</span>
-                <span className="summary-value net">+{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 오른쪽: 날짜 필터 */}
-          <div className="summary-right">
+          <div className="date-filter-row">
             <div className="date-range-picker">
               <Calendar size={18} className="calendar-icon" />
               <input
@@ -274,6 +252,24 @@ const PointDashboard = () => {
                 필터 초기화
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* 하단: 발행, 사용, 순 발행 */}
+        <div className="summary-items">
+          <div className="summary-item">
+            <span className="summary-label">발행</span>
+            <span className="summary-value earn">+{formatNumber(stats.monthlyIssued)}P</span>
+          </div>
+          <div className="summary-divider" />
+          <div className="summary-item">
+            <span className="summary-label">사용</span>
+            <span className="summary-value use">-{formatNumber(stats.monthlyUsed)}P</span>
+          </div>
+          <div className="summary-divider" />
+          <div className="summary-item">
+            <span className="summary-label">순 발행</span>
+            <span className="summary-value net">+{formatNumber(stats.monthlyIssued - stats.monthlyUsed)}P</span>
           </div>
         </div>
       </div>
