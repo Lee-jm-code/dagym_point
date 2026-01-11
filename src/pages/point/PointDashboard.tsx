@@ -356,7 +356,7 @@ const PointDashboard = () => {
             </select>
           </div>
 
-          <div className="pagination">
+          <div className="pagination-center">
             <button 
               className="page-btn nav"
               onClick={() => handlePageChange(currentPage - 1)}
