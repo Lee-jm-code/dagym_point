@@ -386,24 +386,17 @@
 /* 페이지네이션 */
 .pagination-wrapper {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 16px;
   padding: 16px 24px;
   border-top: 1px solid #f0f0f0;
-}
-
-.pagination-top {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+  position: relative;
 }
 
 .rows-per-page {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .rows-label {
@@ -430,6 +423,9 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .page-btn {
@@ -522,6 +518,11 @@
   .pagination-wrapper {
     flex-direction: column;
     gap: 16px;
+  }
+  
+  .pagination-center {
+    position: static;
+    transform: none;
   }
   
   .page-btn {
