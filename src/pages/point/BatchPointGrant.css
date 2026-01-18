@@ -38,7 +38,7 @@
 .filter-section {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px 20px;
   margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
@@ -46,7 +46,6 @@
 .filter-content {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 16px;
 }
 
@@ -57,8 +56,8 @@
 .filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .filter-row:last-child {
@@ -68,13 +67,13 @@
 .filter-dropdown {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  background: #f5f5f5;
+  gap: 4px;
+  padding: 8px 12px;
+  background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 24px;
-  font-size: 14px;
-  color: #555;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #666;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
@@ -83,7 +82,6 @@
 .filter-dropdown:hover {
   border-color: #6366f1;
   color: #6366f1;
-  background: #f0f4ff;
 }
 
 .filter-dropdown.active {
@@ -96,12 +94,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 20px;
+  padding: 8px 16px;
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 14px;
-  color: #333;
+  font-size: 13px;
+  color: #999;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;
@@ -379,13 +377,13 @@
 }
 
 .member-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   color: #1a1a2e;
 }
 
 .member-phone {
-  font-size: 13px;
+  font-size: 12px;
   color: #999;
 }
 
