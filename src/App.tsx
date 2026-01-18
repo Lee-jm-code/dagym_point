@@ -6,6 +6,7 @@ import AutoPointSettings from './pages/point/AutoPointSettings';
 import BatchPointGrant from './pages/point/BatchPointGrant';
 import PointPolicy from './pages/point/PointPolicy';
 import Members from './pages/members/Members';
+import MemberDetail from './pages/members/MemberDetail';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           {/* 회원 관리 */}
           <Route path="members">
             <Route index element={<Members />} />
+            <Route path=":id" element={<MemberDetail />} />
             <Route path="pre" element={<Members />} />
             <Route path="contracts" element={<Members />} />
             <Route path="contract-settings" element={<Members />} />

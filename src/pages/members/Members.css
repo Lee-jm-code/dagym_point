@@ -278,6 +278,15 @@
   background: #fafafa;
 }
 
+.members-table tr.clickable-row {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.members-table tr.clickable-row:hover td {
+  background: #f0f4ff;
+}
+
 .checkbox-col {
   width: 40px;
   text-align: center;

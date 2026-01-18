@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, X, Download } from 'lucide-react';
 import './Members.css';
 
@@ -36,11 +37,16 @@ const filterOptions2 = [
 const tabs = ['회원', '예비회원', '전자계약서', '전자계약 설정', '타지점회원', '다짐 상담톡'];
 
 const Members = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('회원');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const handleMemberClick = (memberId: string) => {
+    navigate(`/members/${memberId}`);
+  };
 
   const stats = {
     valid: 1353,
@@ -197,8 +203,8 @@ const Members = () => {
           </thead>
           <tbody>
             {currentMembers.map(member => (
-              <tr key={member.id}>
-                <td className="checkbox-col">
+              <tr key={member.id} className="clickable-row" onClick={() => handleMemberClick(member.id)}>
+                <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={selectedMembers.includes(member.id)}
@@ -225,7 +231,7 @@ const Members = () => {
                 <td>{member.remainingDays}</td>
                 <td>{member.remainingCount}</td>
                 <td>{member.lockerNumber}</td>
-                <td className="action-cell">
+                <td className="action-cell" onClick={(e) => e.stopPropagation()}>
                   <button className="delete-btn">
                     <X size={18} />
                   </button>
