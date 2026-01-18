@@ -53,13 +53,13 @@ const menuItems: MenuItem[] = [
   { id: 'kiosk', label: '키오스크/출입', icon: <DoorOpen size={20} />, path: '/kiosk' },
   { 
     id: 'point', 
-    label: '포인트 관리', 
+    label: '포인트', 
     icon: <Coins size={20} />,
     children: [
-      { id: 'dashboard', label: '대시보드', path: '/point/dashboard' },
-      { id: 'auto-settings', label: '자동 지급 설정', path: '/point/auto-settings' },
-      { id: 'batch-grant', label: '일괄 지급', path: '/point/batch-grant' },
-      { id: 'policy', label: '정책 설정', path: '/point/policy' },
+      { id: 'batch-grant', label: '포인트 지급', path: '/point/batch-grant' },
+      { id: 'auto-settings', label: '자동 지급', path: '/point/auto-settings' },
+      { id: 'dashboard', label: '포인트 사용/충전', path: '/point/dashboard' },
+      { id: 'policy', label: '설정', path: '/point/policy' },
     ]
   },
   { 
