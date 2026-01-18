@@ -496,3 +496,225 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 상품 배정 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.product-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.product-modal .modal-body {
+  padding: 24px;
+}
+
+.product-modal .form-group {
+  margin-bottom: 20px;
+}
+
+.product-modal .form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.product-modal .form-select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
+.product-modal .form-select.full-width {
+  width: 100%;
+}
+
+.product-modal .form-select.dark {
+  background-color: #f5f5f5;
+}
+
+.product-modal .form-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.product-modal .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.date-range-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.date-range-row .form-select {
+  flex: 1;
+}
+
+.date-separator {
+  color: #666;
+  font-size: 16px;
+}
+
+.payment-method-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.payment-promo {
+  font-size: 13px;
+  color: #6366f1;
+}
+
+.payment-method-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.payment-select {
+  width: 150px !important;
+  flex: none !important;
+}
+
+.installment-link {
+  font-size: 14px;
+  color: #6366f1;
+  text-decoration: underline;
+}
+
+.price-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.price-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.price-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.price-input-wrapper.disabled {
+  background: #f5f5f5;
+}
+
+.price-input {
+  flex: 1;
+  padding: 14px 16px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  text-align: right;
+  background: transparent;
+}
+
+.price-suffix {
+  padding: 14px 16px;
+  background: #f5f5f5;
+  font-size: 14px;
+  color: #666;
+}
+
+.add-payment-btn {
+  width: 100%;
+  padding: 14px;
+  background: #f0f4ff;
+  border: 1px dashed #6366f1;
+  border-radius: 8px;
+  color: #6366f1;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-payment-btn:hover {
+  background: #e0e7ff;
+}
+
+.product-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.product-modal .btn-cancel {
+  padding: 12px 32px;
+  background: #f5f5f5;
+  color: #666;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.product-modal .btn-cancel:hover {
+  background: #e5e5e5;
+}
+
+.product-modal .btn-assign {
+  padding: 12px 32px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.product-modal .btn-assign:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.product-modal .btn-assign:disabled {
+  background: #c7c7c7;
+  cursor: not-allowed;
+}

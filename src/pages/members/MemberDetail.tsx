@@ -248,8 +248,67 @@ const MemberDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeProductTab, setActiveProductTab] = useState<'active' | 'past'>('active');
+  const [showProductModal, setShowProductModal] = useState(false);
+  
+  // 상품 배정 폼 상태
+  const [productForm, setProductForm] = useState({
+    product: '',
+    membershipPeriod: '',
+    salesManager: '',
+    exerciseStartDate: '',
+    exerciseEndDate: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMethod: '카드',
+    productPrice: 0,
+    salePrice: 0,
+    receivedAmount: 0,
+  });
 
   const member = mockMemberData[id || '2'] || mockMemberData['2'];
+
+  const productOptions = [
+    '헬스 1개월',
+    '헬스 3개월',
+    '헬스 6개월',
+    '헬스 12개월',
+    'PT 10회',
+    'PT 20회',
+    '운동복 대여',
+    '락커 이용권',
+  ];
+
+  const handleProductFormChange = (field: string, value: string | number) => {
+    setProductForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAssignProduct = () => {
+    // 상품 배정 로직
+    alert('상품이 배정되었습니다.');
+    setShowProductModal(false);
+    setProductForm({
+      product: '',
+      membershipPeriod: '',
+      salesManager: '',
+      exerciseStartDate: '',
+      exerciseEndDate: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: '카드',
+      productPrice: 0,
+      salePrice: 0,
+      receivedAmount: 0,
+    });
+  };
+
+  const formatDateWithDay = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dayName = days[date.getDay()];
+    return `${year}.${month}.${day} (${dayName})`;
+  };
 
   const activeProducts = member.products.filter(p => p.isActive);
   const pastProducts = member.products.filter(p => !p.isActive);
@@ -357,7 +416,7 @@ const MemberDetail = () => {
                 지난 상품
               </button>
             </div>
-            <button className="add-btn"><Plus size={20} /></button>
+            <button className="add-btn" onClick={() => setShowProductModal(true)}><Plus size={20} /></button>
           </div>
           <div className="product-list">
             {(activeProductTab === 'active' ? activeProducts : pastProducts).length > 0 ? (
@@ -479,6 +538,167 @@ const MemberDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* 상품 배정 모달 */}
+      {showProductModal && (
+        <div className="modal-overlay" onClick={() => setShowProductModal(false)}>
+          <div className="product-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-body">
+              {/* 상품 선택 */}
+              <div className="form-group">
+                <select
+                  className="form-select full-width"
+                  value={productForm.product}
+                  onChange={e => handleProductFormChange('product', e.target.value)}
+                >
+                  <option value="">상품을 선택해주세요</option>
+                  {productOptions.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 회원권 기간 선택, 결제와 세일즈 담당자 */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">회원권 기간 선택</label>
+                  <select
+                    className="form-select"
+                    value={productForm.membershipPeriod}
+                    onChange={e => handleProductFormChange('membershipPeriod', e.target.value)}
+                  >
+                    <option value="">선택해 주세요.</option>
+                    <option value="1개월">1개월</option>
+                    <option value="3개월">3개월</option>
+                    <option value="6개월">6개월</option>
+                    <option value="12개월">12개월</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">결제와 세일즈 담당자(선택)</label>
+                  <select
+                    className="form-select"
+                    value={productForm.salesManager}
+                    onChange={e => handleProductFormChange('salesManager', e.target.value)}
+                  >
+                    <option value="">선택해 주세요.</option>
+                    <option value="담당자1">담당자1</option>
+                    <option value="담당자2">담당자2</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 운동 기간 */}
+              <div className="form-group">
+                <label className="form-label">운동 기간</label>
+                <div className="date-range-row">
+                  <select
+                    className="form-select"
+                    value={productForm.exerciseStartDate}
+                    onChange={e => handleProductFormChange('exerciseStartDate', e.target.value)}
+                  >
+                    <option value="">운동 시작일</option>
+                  </select>
+                  <span className="date-separator">~</span>
+                  <select
+                    className="form-select dark"
+                    value={productForm.exerciseEndDate}
+                    onChange={e => handleProductFormChange('exerciseEndDate', e.target.value)}
+                  >
+                    <option value="">운동 종료일</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 결제일 */}
+              <div className="form-group">
+                <label className="form-label">결제일</label>
+                <select
+                  className="form-select"
+                  value={productForm.paymentDate}
+                  onChange={e => handleProductFormChange('paymentDate', e.target.value)}
+                >
+                  <option value={productForm.paymentDate}>{formatDateWithDay(productForm.paymentDate)}</option>
+                </select>
+              </div>
+
+              {/* 결제수단 */}
+              <div className="form-group">
+                <div className="payment-method-header">
+                  <label className="form-label">결제수단</label>
+                  <span className="payment-promo">다짐 결제링크로 최대 7개월 무이자 할부 결제가 가능해요.</span>
+                </div>
+                <div className="payment-method-row">
+                  <select
+                    className="form-select payment-select"
+                    value={productForm.paymentMethod}
+                    onChange={e => handleProductFormChange('paymentMethod', e.target.value)}
+                  >
+                    <option value="카드">카드</option>
+                    <option value="현금">현금</option>
+                    <option value="계좌이체">계좌이체</option>
+                  </select>
+                  <a href="#" className="installment-link">이번달 무이자 할부 보기</a>
+                </div>
+              </div>
+
+              {/* 가격 정보 */}
+              <div className="price-row">
+                <div className="price-item">
+                  <label className="form-label">상품 가격</label>
+                  <div className="price-input-wrapper disabled">
+                    <input
+                      type="text"
+                      className="price-input"
+                      value={productForm.productPrice}
+                      readOnly
+                    />
+                    <span className="price-suffix">원</span>
+                  </div>
+                </div>
+                <div className="price-item">
+                  <label className="form-label">판매금액</label>
+                  <div className="price-input-wrapper">
+                    <input
+                      type="number"
+                      className="price-input"
+                      value={productForm.salePrice || ''}
+                      onChange={e => handleProductFormChange('salePrice', parseInt(e.target.value) || 0)}
+                    />
+                    <span className="price-suffix">원</span>
+                  </div>
+                </div>
+                <div className="price-item">
+                  <label className="form-label">받은 금액</label>
+                  <div className="price-input-wrapper">
+                    <input
+                      type="number"
+                      className="price-input"
+                      value={productForm.receivedAmount || ''}
+                      onChange={e => handleProductFormChange('receivedAmount', parseInt(e.target.value) || 0)}
+                    />
+                    <span className="price-suffix">원</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 결제수단 추가 버튼 */}
+              <button className="add-payment-btn">결제수단 추가</button>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setShowProductModal(false)}>취소</button>
+              <button 
+                className="btn-assign"
+                onClick={handleAssignProduct}
+                disabled={!productForm.product}
+              >
+                배정하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
