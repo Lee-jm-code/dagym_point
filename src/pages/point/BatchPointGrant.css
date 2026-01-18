@@ -48,6 +48,7 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+  justify-content: flex-start;
 }
 
 .filter-row:last-child {
@@ -265,7 +266,7 @@
 }
 
 .member-name {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   color: #1a1a2e;
 }
