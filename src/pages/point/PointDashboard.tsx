@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, Coins, Gift, ShoppingCart, Clock, Calendar, RotateCcw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Coins, Gift, ShoppingCart, Clock, Calendar, RotateCcw, Search } from 'lucide-react';
 import type { PointStats, PointTransaction } from '../../types/point';
 import './PointDashboard.css';
 
@@ -83,6 +83,7 @@ const PointDashboard = () => {
   const [transactions] = useState<PointTransaction[]>(mockTransactions);
   const [dateFilter, setDateFilter] = useState<DateFilterType>('thisMonth');
   const [dateRange, setDateRange] = useState(getDateRange('thisMonth'));
+  const [searchQuery, setSearchQuery] = useState('');
   
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,8 +108,16 @@ const PointDashboard = () => {
     setDateRange(getDateRange('thisMonth'));
   };
 
+  // 회원명 검색 필터링
+  const filteredTransactions = transactions.filter(tx => {
+    if (searchQuery) {
+      return tx.memberName.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    return true;
+  });
+
   // 시간순 정렬 (최신순)
-  const sortedTransactions = [...transactions].sort((a, b) => 
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
@@ -147,7 +156,7 @@ const PointDashboard = () => {
             </span>
           </div>
           <div className="stat-card-body">
-            <span className="stat-label">총 발행 포인트</span>
+            <span className="stat-label">총 지급 포인트</span>
             <span className="stat-value">{formatNumber(stats.totalIssued)}P</span>
           </div>
         </div>
@@ -199,7 +208,7 @@ const PointDashboard = () => {
 
       {/* 날짜 필터 + 포인트 현황 */}
       <div className="filter-summary-card">
-        {/* 첫 번째 줄: 날짜 선택 */}
+        {/* 첫 번째 줄: 날짜 선택 + 회원 검색 */}
         <div className="filter-row-1">
           <div className="date-range-picker">
             <Calendar size={18} className="calendar-icon" />
@@ -215,6 +224,19 @@ const PointDashboard = () => {
               className="date-input"
               value={formatDateInput(dateRange.end)}
               onChange={(e) => handleDateChange('end', e.target.value)}
+            />
+          </div>
+          <div className="member-search-box">
+            <Search size={18} className="search-icon" />
+            <input
+              type="text"
+              className="member-search-input"
+              placeholder="회원명 검색"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>

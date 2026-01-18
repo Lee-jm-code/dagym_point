@@ -110,7 +110,40 @@
 
 /* 첫 번째 줄: 날짜 선택 */
 .filter-row-1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 16px;
+}
+
+.member-search-box {
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 16px;
+  width: 250px;
+}
+
+.member-search-box .search-icon {
+  color: #999;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.member-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+  background: transparent;
+}
+
+.member-search-input::placeholder {
+  color: #999;
 }
 
 .date-range-picker {
