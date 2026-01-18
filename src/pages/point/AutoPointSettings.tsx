@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gift, RefreshCw, Calendar, Megaphone, Settings, X } from 'lucide-react';
+import { Gift, RefreshCw, Calendar, Megaphone, Settings, X, Check } from 'lucide-react';
 import type { AutoPointEvent } from '../../types/point';
 import './AutoPointSettings.css';
 
@@ -57,6 +57,7 @@ const AutoPointSettings = () => {
   const [events, setEvents] = useState<AutoPointEvent[]>(initialEvents);
   const [editingEvent, setEditingEvent] = useState<AutoPointEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAutoPointEnabled, setIsAutoPointEnabled] = useState(true);
 
   const toggleEvent = (eventId: string) => {
     setEvents(events.map(event => 
@@ -84,6 +85,25 @@ const AutoPointSettings = () => {
 
   return (
     <div className="auto-point-settings">
+      {/* 상단 자동 지급 토글 */}
+      <div className="auto-point-toggle-section">
+        <label className="auto-point-toggle">
+          <input
+            type="checkbox"
+            checked={isAutoPointEnabled}
+            onChange={(e) => setIsAutoPointEnabled(e.target.checked)}
+          />
+          <span className="custom-checkbox">
+            {isAutoPointEnabled && <Check size={14} />}
+          </span>
+          <span className="toggle-text">설정대로 자동으로 포인트를 지급합니다.</span>
+        </label>
+        <div className="auto-point-description">
+          <p>자동 포인트 지급 기능을 켜두시면 아래 설정의 조건이 충족될 때</p>
+          <p>회원님들께 자동으로 포인트를 지급해 편하고 효과적인 마케팅을 진행하실 수 있습니다.</p>
+        </div>
+      </div>
+
       <div className="page-header">
         <h1 className="page-title">자동 지급 설정</h1>
         <p className="page-description">

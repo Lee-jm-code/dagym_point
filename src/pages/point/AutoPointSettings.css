@@ -2,6 +2,64 @@
   max-width: 900px;
 }
 
+/* 상단 자동 지급 토글 섹션 */
+.auto-point-toggle-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  margin-bottom: 32px;
+}
+
+.auto-point-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  background: #f0f4ff;
+  padding: 16px 24px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.auto-point-toggle input {
+  display: none;
+}
+
+.auto-point-toggle .custom-checkbox {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #5c6bc0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  color: #5c6bc0;
+  flex-shrink: 0;
+}
+
+.auto-point-toggle input:checked + .custom-checkbox {
+  background: #5c6bc0;
+  color: white;
+}
+
+.auto-point-toggle .toggle-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #5c6bc0;
+}
+
+.auto-point-description {
+  padding-top: 16px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.auto-point-description p {
+  margin: 0;
+}
+
 .page-header {
   margin-bottom: 28px;
 }
