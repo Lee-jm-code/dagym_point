@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, ChevronDown, Send, CheckCircle, X } from 'lucide-react';
+import { Search, ChevronDown, Send, CheckCircle, X, RotateCcw } from 'lucide-react';
 import './BatchPointGrant.css';
 
 interface TargetMember {
@@ -42,6 +42,25 @@ const BatchPointGrant = () => {
   const [isGranted, setIsGranted] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showGrantForm, setShowGrantForm] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string>>({});
+
+  const handleFilterClick = (filter: string) => {
+    setSelectedFilters(prev => {
+      if (prev[filter]) {
+        const newFilters = { ...prev };
+        delete newFilters[filter];
+        return newFilters;
+      }
+      return { ...prev, [filter]: 'selected' };
+    });
+  };
+
+  const resetFilters = () => {
+    setSelectedFilters({});
+  };
+
+  const hasActiveFilters = Object.keys(selectedFilters).length > 0;
 
   // 검색 필터링
   const filteredMembers = mockMembers.filter(member => {
@@ -111,66 +130,117 @@ const BatchPointGrant = () => {
 
       {/* 필터 영역 */}
       <div className="filter-section">
-        <div className="filter-row">
-          {filterOptions.map(option => (
-            <button key={option} className="filter-dropdown">
-              {option}
-              <ChevronDown size={14} />
-            </button>
-          ))}
-        </div>
-        <div className="filter-row">
-          {filterOptions2.map(option => (
-            <button key={option} className="filter-dropdown">
-              {option}
-              <ChevronDown size={14} />
-            </button>
-          ))}
+        <div className="filter-content">
+          <div className="filter-rows">
+            <div className="filter-row">
+              {filterOptions.map(option => (
+                <button 
+                  key={option} 
+                  className={`filter-dropdown ${selectedFilters[option] ? 'active' : ''}`}
+                  onClick={() => handleFilterClick(option)}
+                >
+                  {option}
+                  <ChevronDown size={14} />
+                </button>
+              ))}
+            </div>
+            <div className="filter-row">
+              {filterOptions2.map(option => (
+                <button 
+                  key={option} 
+                  className={`filter-dropdown ${selectedFilters[option] ? 'active' : ''}`}
+                  onClick={() => handleFilterClick(option)}
+                >
+                  {option}
+                  <ChevronDown size={14} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <button 
+            className={`filter-reset-btn ${hasActiveFilters ? 'active' : ''}`}
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+          >
+            <RotateCcw size={14} />
+            필터초기화
+          </button>
         </div>
       </div>
 
-      {/* 포인트 지급 설정 */}
-      <div className="grant-settings">
-        <div className="grant-input-group">
-          <label className="grant-label">지급 포인트</label>
-          <div className="input-with-suffix">
-            <input
-              type="number"
-              className="grant-input"
-              value={pointAmount}
-              onChange={e => setPointAmount(parseInt(e.target.value) || 0)}
-              placeholder="0"
-            />
-            <span className="input-suffix">P</span>
+      {/* 포인트 지급 버튼 (회원 선택 시 활성화) */}
+      {!showGrantForm && (
+        <div className="grant-button-section">
+          <div className="grant-summary-inline">
+            <span className="summary-text">
+              선택: <strong>{selectedMembers.length}명</strong>
+            </span>
+          </div>
+          <button 
+            className="btn-grant"
+            onClick={() => setShowGrantForm(true)}
+            disabled={selectedMembers.length === 0}
+          >
+            <Send size={18} />
+            포인트 지급
+          </button>
+        </div>
+      )}
+
+      {/* 포인트 지급 설정 폼 (버튼 클릭 시 표시) */}
+      {showGrantForm && (
+        <div className="grant-settings">
+          <div className="grant-form-header">
+            <h3 className="grant-form-title">포인트 지급</h3>
+            <button className="grant-form-close" onClick={() => setShowGrantForm(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="grant-form-content">
+            <div className="grant-input-group">
+              <label className="grant-label">지급 포인트</label>
+              <div className="input-with-suffix">
+                <input
+                  type="number"
+                  className="grant-input"
+                  value={pointAmount}
+                  onChange={e => setPointAmount(parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                />
+                <span className="input-suffix">P</span>
+              </div>
+            </div>
+            <div className="grant-input-group reason-group">
+              <label className="grant-label">지급 사유</label>
+              <input
+                type="text"
+                className="grant-input reason-input"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder="예: 신년 이벤트 포인트 지급"
+              />
+            </div>
+          </div>
+          <div className="grant-form-footer">
+            <div className="grant-summary">
+              <span className="summary-text">
+                선택: <strong>{selectedMembers.length}명</strong>
+              </span>
+              <span className="summary-text">
+                총 지급: <strong className="total-points">{totalPoints.toLocaleString()}P</strong>
+              </span>
+            </div>
+            <button 
+              className="btn-grant"
+              onClick={handleGrant}
+              disabled={!pointAmount || !reason}
+            >
+              <Send size={18} />
+              지급하기
+            </button>
           </div>
         </div>
-        <div className="grant-input-group reason-group">
-          <label className="grant-label">지급 사유</label>
-          <input
-            type="text"
-            className="grant-input reason-input"
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            placeholder="예: 신년 이벤트 포인트 지급"
-          />
-        </div>
-        <div className="grant-summary">
-          <span className="summary-text">
-            선택: <strong>{selectedMembers.length}명</strong>
-          </span>
-          <span className="summary-text">
-            총 지급: <strong className="total-points">{totalPoints.toLocaleString()}P</strong>
-          </span>
-        </div>
-        <button 
-          className="btn-grant"
-          onClick={handleGrant}
-          disabled={selectedMembers.length === 0 || !pointAmount || !reason}
-        >
-          <Send size={18} />
-          포인트 지급
-        </button>
-      </div>
+      )}
 
       {/* 회원 테이블 */}
       <div className="members-table-wrapper">

@@ -43,12 +43,21 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+.filter-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.filter-rows {
+  flex: 1;
+}
+
 .filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
-  justify-content: flex-start;
+  margin-bottom: 8px;
 }
 
 .filter-row:last-child {
@@ -58,15 +67,16 @@
 .filter-dropdown {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 4px;
+  padding: 8px 12px;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  border-radius: 20px;
   font-size: 13px;
   color: #666;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .filter-dropdown:hover {
@@ -74,17 +84,118 @@
   color: #6366f1;
 }
 
-/* 포인트 지급 설정 */
-.grant-settings {
+.filter-dropdown.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+}
+
+.filter-reset-btn {
   display: flex;
   align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #999;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.filter-reset-btn:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.filter-reset-btn.active {
+  color: #6366f1;
+  border-color: #6366f1;
+}
+
+.filter-reset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 포인트 지급 버튼 섹션 */
+.grant-button-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: 16px;
   background: white;
   border-radius: 12px;
   padding: 16px 20px;
   margin-bottom: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.grant-summary-inline {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* 포인트 지급 설정 */
+.grant-settings {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.grant-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.grant-form-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.grant-form-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grant-form-close:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.grant-form-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
   flex-wrap: wrap;
+}
+
+.grant-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
 }
 
 .grant-input-group {
