@@ -659,6 +659,76 @@
   color: #666;
 }
 
+.price-discount {
+  font-size: 12px;
+  color: #6366f1;
+  margin-top: 4px;
+}
+
+/* 포인트 사용 섹션 */
+.point-usage-section {
+  background: #f8f9ff;
+  border: 1px solid #e0e7ff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.point-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.point-usage-header .form-label {
+  margin-bottom: 0;
+}
+
+.available-points {
+  font-size: 14px;
+  color: #666;
+}
+
+.available-points strong {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.point-usage-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.point-input-wrapper {
+  flex: 1;
+  max-width: 200px;
+}
+
+.use-all-points-btn {
+  padding: 12px 20px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.use-all-points-btn:hover {
+  background: #4f46e5;
+}
+
+.point-error {
+  display: block;
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: 8px;
+}
+
 .add-payment-btn {
   width: 100%;
   padding: 14px;

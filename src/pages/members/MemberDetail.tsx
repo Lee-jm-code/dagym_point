@@ -262,6 +262,7 @@ const MemberDetail = () => {
     productPrice: 0,
     salePrice: 0,
     receivedAmount: 0,
+    usePoints: 0,
   });
 
   const member = mockMemberData[id || '2'] || mockMemberData['2'];
@@ -281,6 +282,12 @@ const MemberDetail = () => {
     setProductForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const handlePointsChange = (value: number) => {
+    // 보유 포인트보다 크면 보유 포인트로 제한
+    const validValue = Math.min(Math.max(0, value), member.point);
+    setProductForm(prev => ({ ...prev, usePoints: validValue }));
+  };
+
   const handleAssignProduct = () => {
     // 상품 배정 로직
     alert('상품이 배정되었습니다.');
@@ -296,8 +303,13 @@ const MemberDetail = () => {
       productPrice: 0,
       salePrice: 0,
       receivedAmount: 0,
+      usePoints: 0,
     });
   };
+
+  // 포인트 차감 후 금액 계산
+  const finalSalePrice = Math.max(0, productForm.salePrice - productForm.usePoints);
+  const finalReceivedAmount = Math.max(0, productForm.receivedAmount - productForm.usePoints);
 
   const formatDateWithDay = (dateStr: string) => {
     if (!dateStr) return '';
@@ -667,6 +679,9 @@ const MemberDetail = () => {
                     />
                     <span className="price-suffix">원</span>
                   </div>
+                  {productForm.usePoints > 0 && (
+                    <span className="price-discount">포인트 적용: {finalSalePrice.toLocaleString()}원</span>
+                  )}
                 </div>
                 <div className="price-item">
                   <label className="form-label">받은 금액</label>
@@ -679,7 +694,43 @@ const MemberDetail = () => {
                     />
                     <span className="price-suffix">원</span>
                   </div>
+                  {productForm.usePoints > 0 && (
+                    <span className="price-discount">포인트 적용: {finalReceivedAmount.toLocaleString()}원</span>
+                  )}
                 </div>
+              </div>
+
+              {/* 포인트 사용 */}
+              <div className="point-usage-section">
+                <div className="point-usage-header">
+                  <label className="form-label">포인트 사용</label>
+                  <span className="available-points">
+                    사용 가능: <strong>{member.point.toLocaleString()}P</strong>
+                  </span>
+                </div>
+                <div className="point-usage-input-row">
+                  <div className="price-input-wrapper point-input-wrapper">
+                    <input
+                      type="number"
+                      className="price-input"
+                      value={productForm.usePoints || ''}
+                      onChange={e => handlePointsChange(parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                      max={member.point}
+                    />
+                    <span className="price-suffix">P</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="use-all-points-btn"
+                    onClick={() => handlePointsChange(member.point)}
+                  >
+                    전액 사용
+                  </button>
+                </div>
+                {productForm.usePoints > member.point && (
+                  <span className="point-error">보유 포인트를 초과할 수 없습니다.</span>
+                )}
               </div>
 
               {/* 결제수단 추가 버튼 */}
