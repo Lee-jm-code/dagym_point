@@ -28,7 +28,19 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { id: 'dashboard', label: '출석/대시보드', icon: <LayoutDashboard size={20} />, path: '/' },
-  { id: 'members', label: '회원', icon: <Users size={20} />, path: '/members' },
+  { 
+    id: 'members', 
+    label: '회원', 
+    icon: <Users size={20} />,
+    children: [
+      { id: 'members-list', label: '회원', path: '/members' },
+      { id: 'pre-members', label: '예비회원', path: '/members/pre' },
+      { id: 'contracts', label: '전자계약서', path: '/members/contracts' },
+      { id: 'contract-settings', label: '전자계약 설정', path: '/members/contract-settings' },
+      { id: 'other-branch', label: '타지점회원', path: '/members/other-branch' },
+      { id: 'dagym-chat', label: '다짐 상담톡', path: '/members/chat' },
+    ]
+  },
   { id: 'products', label: '상품', icon: <Package size={20} />, path: '/products' },
   { id: 'schedule', label: '일정', icon: <Calendar size={20} />, path: '/schedule' },
   { id: 'community', label: '커뮤니티', icon: <MessageSquare size={20} />, path: '/community' },
@@ -67,7 +79,7 @@ const menuItems: MenuItem[] = [
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(['point']);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['members', 'point']);
 
   const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev => 
