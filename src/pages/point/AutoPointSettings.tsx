@@ -85,7 +85,14 @@ const AutoPointSettings = () => {
 
   return (
     <div className="auto-point-settings">
-      {/* 상단 자동 지급 토글 */}
+      <div className="page-header">
+        <h1 className="page-title">자동 지급 설정</h1>
+        <p className="page-description">
+          이벤트 발생 시 자동으로 포인트가 지급되도록 설정합니다.
+        </p>
+      </div>
+
+      {/* 자동 지급 토글 */}
       <div className="auto-point-toggle-section">
         <label className="auto-point-toggle">
           <input
@@ -104,16 +111,9 @@ const AutoPointSettings = () => {
         </div>
       </div>
 
-      <div className="page-header">
-        <h1 className="page-title">자동 지급 설정</h1>
-        <p className="page-description">
-          이벤트 발생 시 자동으로 포인트가 지급되도록 설정합니다.
-        </p>
-      </div>
-
-      <div className="events-list">
+      <div className={`events-list ${!isAutoPointEnabled ? 'disabled' : ''}`}>
         {events.map(event => (
-          <div key={event.id} className={`event-card ${event.isActive ? 'active' : 'inactive'}`}>
+          <div key={event.id} className={`event-card ${event.isActive && isAutoPointEnabled ? 'active' : 'inactive'}`}>
             <div className="event-card-main">
               <div className="event-icon-wrapper">
                 {eventIcons[event.eventType]}
@@ -122,8 +122,8 @@ const AutoPointSettings = () => {
               <div className="event-info">
                 <div className="event-header">
                   <h3 className="event-name">{event.eventName}</h3>
-                  <span className={`event-status ${event.isActive ? 'on' : 'off'}`}>
-                    {event.isActive ? 'ON' : 'OFF'}
+                  <span className={`event-status ${event.isActive && isAutoPointEnabled ? 'on' : 'off'}`}>
+                    {event.isActive && isAutoPointEnabled ? 'ON' : 'OFF'}
                   </span>
                 </div>
                 <p className="event-description">{event.description}</p>
@@ -149,15 +149,20 @@ const AutoPointSettings = () => {
               </div>
 
               <div className="event-actions">
-                <label className="toggle-switch">
+                <label className={`toggle-switch ${!isAutoPointEnabled ? 'disabled' : ''}`}>
                   <input 
                     type="checkbox" 
                     checked={event.isActive}
                     onChange={() => toggleEvent(event.id)}
+                    disabled={!isAutoPointEnabled}
                   />
                   <span className="toggle-slider"></span>
                 </label>
-                <button className="edit-btn" onClick={() => openEditModal(event)}>
+                <button 
+                  className="edit-btn" 
+                  onClick={() => openEditModal(event)}
+                  disabled={!isAutoPointEnabled}
+                >
                   <Settings size={18} />
                   설정 수정
                 </button>
