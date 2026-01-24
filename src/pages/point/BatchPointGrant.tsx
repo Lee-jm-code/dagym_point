@@ -103,10 +103,43 @@ const BatchPointGrant = () => {
       alert('지급 사유를 입력해주세요.');
       return;
     }
+    
+    // 선택된 회원들에게 포인트 지급 및 이력 추가 (localStorage에 저장)
+    const now = new Date();
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    selectedMembers.forEach(memberId => {
+      // 현재 포인트 가져오기
+      const storedPoints = localStorage.getItem(`member_${memberId}_points`);
+      const currentPoints = storedPoints ? JSON.parse(storedPoints) : 
+        (mockMembers.find(m => m.id === memberId)?.currentPoints || 0);
+      const newPoints = currentPoints + pointAmount;
+      
+      // 포인트 저장
+      localStorage.setItem(`member_${memberId}_points`, JSON.stringify(newPoints));
+      
+      // 포인트 이력 가져오기 및 추가
+      const storedHistory = localStorage.getItem(`member_${memberId}_pointHistory`);
+      const currentHistory = storedHistory ? JSON.parse(storedHistory) : [];
+      
+      const newHistoryEntry = {
+        id: `ph${Date.now()}_${memberId}`,
+        type: 'earn',
+        amount: pointAmount,
+        balance: newPoints,
+        reason: reason,
+        createdAt: dateTimeStr,
+      };
+      
+      localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify([newHistoryEntry, ...currentHistory]));
+    });
+    
     setIsGranted(true);
+    setShowGrantForm(false);
     setTimeout(() => {
       setIsGranted(false);
       setSelectedMembers([]);
+      setReason('');
     }, 3000);
   };
 
