@@ -288,28 +288,54 @@ const MemberDetail = () => {
   const memberId = id || '2';
   const initialMember = mockMemberData[memberId] || mockMemberData['2'];
   
-  // localStorage에서 데이터 불러오기
-  const getStoredData = <T,>(key: string, defaultValue: T): T => {
-    const stored = localStorage.getItem(`member_${memberId}_${key}`);
+  // localStorage에서 데이터 불러오기 (컴포넌트 외부에서 즉시 실행)
+  const loadStoredProducts = () => {
+    const stored = localStorage.getItem(`member_${memberId}_products`);
     if (stored) {
       try {
         return JSON.parse(stored);
       } catch {
-        return defaultValue;
+        return initialMember.products;
       }
     }
-    return defaultValue;
+    return initialMember.products;
   };
   
-  const [memberProducts, setMemberProducts] = useState(() => 
-    getStoredData('products', initialMember.products)
-  );
-  const [memberPoints, setMemberPoints] = useState(() => 
-    getStoredData('points', initialMember.point)
-  );
-  const [memberPointHistory, setMemberPointHistory] = useState(() => 
-    getStoredData('pointHistory', initialMember.pointHistory)
-  );
+  const loadStoredPoints = () => {
+    const stored = localStorage.getItem(`member_${memberId}_points`);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return initialMember.point;
+      }
+    }
+    return initialMember.point;
+  };
+  
+  const loadStoredPointHistory = () => {
+    const stored = localStorage.getItem(`member_${memberId}_pointHistory`);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return initialMember.pointHistory;
+      }
+    }
+    return initialMember.pointHistory;
+  };
+  
+  const [memberProducts, setMemberProducts] = useState(loadStoredProducts);
+  const [memberPoints, setMemberPoints] = useState(loadStoredPoints);
+  const [memberPointHistory, setMemberPointHistory] = useState(loadStoredPointHistory);
+  
+  // memberId 변경 시 데이터 다시 로드
+  useEffect(() => {
+    setMemberProducts(loadStoredProducts());
+    setMemberPoints(loadStoredPoints());
+    setMemberPointHistory(loadStoredPointHistory());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberId]);
   
   // 데이터 변경 시 localStorage에 저장
   useEffect(() => {
