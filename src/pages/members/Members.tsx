@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, X, Download } from 'lucide-react';
+import { Search, ChevronDown, X, Download, Send } from 'lucide-react';
 import './Members.css';
 
 interface Member {
@@ -43,9 +43,56 @@ const Members = () => {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // 포인트 지급 모달 상태
+  const [showPointModal, setShowPointModal] = useState(false);
+  const [selectedMemberForPoint, setSelectedMemberForPoint] = useState<Member | null>(null);
+  const [pointAmount, setPointAmount] = useState(0);
+  const [pointReason, setPointReason] = useState('');
 
-  const handleMemberClick = (memberId: string) => {
-    navigate(`/members/${memberId}`);
+  const handleMemberClick = (member: Member) => {
+    setSelectedMemberForPoint(member);
+    setShowPointModal(true);
+    setPointAmount(0);
+    setPointReason('');
+  };
+
+  const handleGrantPoint = () => {
+    if (!selectedMemberForPoint || pointAmount <= 0 || !pointReason) {
+      alert('지급 포인트와 사유를 입력해주세요.');
+      return;
+    }
+    // 포인트 지급 로직 (localStorage에 저장)
+    const memberId = selectedMemberForPoint.id;
+    const storedPoints = localStorage.getItem(`member_${memberId}_points`);
+    const currentPoints = storedPoints ? JSON.parse(storedPoints) : 0;
+    const newPoints = currentPoints + pointAmount;
+    localStorage.setItem(`member_${memberId}_points`, JSON.stringify(newPoints));
+    
+    // 포인트 이력 추가
+    const storedHistory = localStorage.getItem(`member_${memberId}_pointHistory`);
+    const currentHistory = storedHistory ? JSON.parse(storedHistory) : [];
+    const now = new Date();
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const newHistory = {
+      id: `ph${Date.now()}`,
+      type: 'earn',
+      amount: pointAmount,
+      balance: newPoints,
+      reason: pointReason,
+      createdAt: dateTimeStr,
+    };
+    localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify([newHistory, ...currentHistory]));
+    
+    alert(`${selectedMemberForPoint.name}님에게 ${pointAmount.toLocaleString()}P가 지급되었습니다.`);
+    setShowPointModal(false);
+    setSelectedMemberForPoint(null);
+  };
+
+  const handleGoToDetail = () => {
+    if (selectedMemberForPoint) {
+      navigate(`/members/${selectedMemberForPoint.id}`);
+    }
   };
 
   const stats = {
@@ -203,7 +250,7 @@ const Members = () => {
           </thead>
           <tbody>
             {currentMembers.map(member => (
-              <tr key={member.id} className="clickable-row" onClick={() => handleMemberClick(member.id)}>
+              <tr key={member.id} className="clickable-row" onClick={() => handleMemberClick(member)}>
                 <td className="checkbox-col" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
@@ -289,6 +336,67 @@ const Members = () => {
           </button>
         </div>
       </div>
+
+      {/* 포인트 지급 모달 */}
+      {showPointModal && selectedMemberForPoint && (
+        <div className="point-modal-overlay" onClick={() => setShowPointModal(false)}>
+          <div className="point-modal" onClick={e => e.stopPropagation()}>
+            <div className="point-modal-header">
+              <h3 className="point-modal-title">포인트 지급</h3>
+              <button className="point-modal-close" onClick={() => setShowPointModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="point-modal-body">
+              <div className="selected-member-info">
+                <div className="member-avatar-small" />
+                <div className="member-info">
+                  <span className="member-name">{selectedMemberForPoint.name}</span>
+                  <span className="member-phone">{selectedMemberForPoint.phone}</span>
+                </div>
+              </div>
+              
+              <div className="point-form-group">
+                <label className="point-form-label">지급 포인트</label>
+                <div className="point-input-wrapper">
+                  <input
+                    type="number"
+                    className="point-input"
+                    value={pointAmount || ''}
+                    onChange={e => setPointAmount(parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                  <span className="point-suffix">P</span>
+                </div>
+              </div>
+              
+              <div className="point-form-group">
+                <label className="point-form-label">지급 사유</label>
+                <input
+                  type="text"
+                  className="point-reason-input"
+                  value={pointReason}
+                  onChange={e => setPointReason(e.target.value)}
+                  placeholder="예: 이벤트 포인트 지급"
+                />
+              </div>
+            </div>
+            <div className="point-modal-footer">
+              <button className="btn-detail" onClick={handleGoToDetail}>
+                회원 상세보기
+              </button>
+              <button 
+                className="btn-grant-point"
+                onClick={handleGrantPoint}
+                disabled={pointAmount <= 0 || !pointReason}
+              >
+                <Send size={16} />
+                포인트 지급
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
