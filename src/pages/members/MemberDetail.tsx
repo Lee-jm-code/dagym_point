@@ -268,6 +268,7 @@ const MemberDetail = () => {
   const [activeProductTab, setActiveProductTab] = useState<'active' | 'past'>('active');
   const [showProductModal, setShowProductModal] = useState(false);
   const [showPointHistory, setShowPointHistory] = useState(false);
+  const [productMenuOpen, setProductMenuOpen] = useState<string | null>(null);
   
   // 상품 배정 폼 상태
   const [productForm, setProductForm] = useState({
@@ -284,7 +285,9 @@ const MemberDetail = () => {
     usePoints: 0,
   });
 
-  const member = mockMemberData[id || '2'] || mockMemberData['2'];
+  const initialMember = mockMemberData[id || '2'] || mockMemberData['2'];
+  const [memberProducts, setMemberProducts] = useState(initialMember.products);
+  const member = { ...initialMember, products: memberProducts };
 
   const productOptions = [
     '헬스 1개월',
@@ -308,8 +311,48 @@ const MemberDetail = () => {
   };
 
   const handleAssignProduct = () => {
-    // 상품 배정 로직
-    alert('상품이 배정되었습니다.');
+    if (!productForm.product) return;
+    
+    // 상품 색상 랜덤 배정
+    const colors: ('yellow' | 'blue' | 'green' | 'purple')[] = ['yellow', 'blue', 'green', 'purple'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    // 오늘 날짜 계산
+    const today = new Date();
+    const startDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    
+    // 종료일 계산 (기간에 따라)
+    let endDate = startDate;
+    let remainingDays = 30;
+    if (productForm.membershipPeriod === '1개월') {
+      remainingDays = 30;
+    } else if (productForm.membershipPeriod === '3개월') {
+      remainingDays = 90;
+    } else if (productForm.membershipPeriod === '6개월') {
+      remainingDays = 180;
+    } else if (productForm.membershipPeriod === '12개월') {
+      remainingDays = 365;
+    }
+    
+    const endDateObj = new Date(today);
+    endDateObj.setDate(endDateObj.getDate() + remainingDays);
+    endDate = `${endDateObj.getFullYear()}.${String(endDateObj.getMonth() + 1).padStart(2, '0')}.${String(endDateObj.getDate()).padStart(2, '0')}`;
+    
+    // 새 상품 생성
+    const newProduct = {
+      id: `p${Date.now()}`,
+      name: productForm.product,
+      type: productForm.membershipPeriod || '일반회원권',
+      color: randomColor,
+      remainingDays: remainingDays,
+      startDate: startDate,
+      endDate: endDate,
+      isActive: true,
+    };
+    
+    // 상품 목록에 추가
+    setMemberProducts(prev => [...prev, newProduct]);
+    
     setShowProductModal(false);
     setProductForm({
       product: '',
@@ -324,6 +367,11 @@ const MemberDetail = () => {
       receivedAmount: 0,
       usePoints: 0,
     });
+  };
+
+  const handleDeleteProduct = (productId: string) => {
+    setMemberProducts(prev => prev.filter(p => p.id !== productId));
+    setProductMenuOpen(null);
   };
 
   // 포인트 차감 후 금액 계산
@@ -465,7 +513,26 @@ const MemberDetail = () => {
                       </span>
                     </div>
                   </div>
-                  <button className="more-btn"><MoreHorizontal size={18} /></button>
+                  <div className="product-menu-wrapper">
+                    <button 
+                      className="more-btn"
+                      onClick={() => setProductMenuOpen(productMenuOpen === product.id ? null : product.id)}
+                    >
+                      <MoreHorizontal size={18} />
+                    </button>
+                    {productMenuOpen === product.id && (
+                      <div className="product-dropdown-menu">
+                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>재등록</button>
+                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>재등록 결제링크 전송</button>
+                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>홀딩</button>
+                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>기간 연장</button>
+                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>양도</button>
+                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>결제 수정</button>
+                        <button className="dropdown-item refund" onClick={() => setProductMenuOpen(null)}>환불</button>
+                        <button className="dropdown-item delete" onClick={() => handleDeleteProduct(product.id)}>상품 삭제(결제취소)</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             ) : (
