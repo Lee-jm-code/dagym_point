@@ -1,7 +1,16 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ArrowLeft, X } from 'lucide-react';
 import './MemberDetail.css';
+
+interface PointHistory {
+  id: string;
+  type: 'earn' | 'use';
+  amount: number;
+  balance: number;
+  reason: string;
+  createdAt: string;
+}
 
 interface MemberInfo {
   id: string;
@@ -44,6 +53,7 @@ interface MemberInfo {
     totalPayment: number;
     paymentCount: number;
   };
+  pointHistory: PointHistory[];
 }
 
 // 샘플 데이터
@@ -60,7 +70,7 @@ const mockMemberData: Record<string, MemberInfo> = {
     lockerMemo: '-',
     appJoined: false,
     accessInfo: false,
-    point: 0,
+    point: 2000,
     registeredAt: '2026.01.09',
     products: [],
     attendanceRecords: [],
@@ -73,6 +83,10 @@ const mockMemberData: Record<string, MemberInfo> = {
       totalPayment: 0,
       paymentCount: 0,
     },
+    pointHistory: [
+      { id: 'ph1', type: 'earn', amount: 5000, balance: 5000, reason: '새해 이벤트 포인트', createdAt: '2026-01-01 10:00' },
+      { id: 'ph2', type: 'use', amount: -3000, balance: 2000, reason: '포인트 사용', createdAt: '2026-01-20 14:30' },
+    ],
   },
   '2': {
     id: '2',
@@ -120,6 +134,7 @@ const mockMemberData: Record<string, MemberInfo> = {
       totalPayment: 106000,
       paymentCount: 2,
     },
+    pointHistory: [],
   },
   '3': {
     id: '3',
@@ -157,6 +172,7 @@ const mockMemberData: Record<string, MemberInfo> = {
       totalPayment: 50000,
       paymentCount: 1,
     },
+    pointHistory: [],
   },
   '4': {
     id: '4',
@@ -194,6 +210,7 @@ const mockMemberData: Record<string, MemberInfo> = {
       totalPayment: 80000,
       paymentCount: 1,
     },
+    pointHistory: [],
   },
   '5': {
     id: '5',
@@ -241,6 +258,7 @@ const mockMemberData: Record<string, MemberInfo> = {
       totalPayment: 120000,
       paymentCount: 2,
     },
+    pointHistory: [],
   },
 };
 
@@ -249,6 +267,7 @@ const MemberDetail = () => {
   const navigate = useNavigate();
   const [activeProductTab, setActiveProductTab] = useState<'active' | 'past'>('active');
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showPointHistory, setShowPointHistory] = useState(false);
   
   // 상품 배정 폼 상태
   const [productForm, setProductForm] = useState({
@@ -396,7 +415,7 @@ const MemberDetail = () => {
               <span className="info-label">출입정보</span>
               <span className="info-value">{member.accessInfo ? 'O' : 'X'}</span>
             </div>
-            <div className="info-item">
+            <div className="info-item clickable" onClick={() => setShowPointHistory(true)}>
               <span className="info-label">포인트(P)</span>
               <span className="info-value point-value">{member.point.toLocaleString()}P</span>
             </div>
@@ -746,6 +765,52 @@ const MemberDetail = () => {
               >
                 배정하기
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 포인트 이력 팝업 */}
+      {showPointHistory && (
+        <div className="point-history-overlay" onClick={() => setShowPointHistory(false)}>
+          <div className="point-history-popup" onClick={e => e.stopPropagation()}>
+            <div className="popup-header">
+              <h3 className="popup-title">포인트 이력</h3>
+              <button className="popup-close" onClick={() => setShowPointHistory(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="popup-content">
+              <div className="current-point-info">
+                <span className="current-point-label">현재 보유 포인트</span>
+                <span className="current-point-value">{member.point.toLocaleString()}P</span>
+              </div>
+              <div className="point-history-list">
+                {[...member.pointHistory]
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map(history => (
+                    <div key={history.id} className="point-history-item">
+                      <div className="history-left">
+                        <span className={`history-type ${history.type}`}>
+                          {history.type === 'earn' ? '적립' : '사용'}
+                        </span>
+                        <div className="history-info">
+                          <span className="history-reason">{history.reason}</span>
+                          <span className="history-date">{history.createdAt}</span>
+                        </div>
+                      </div>
+                      <div className="history-right">
+                        <span className={`history-amount ${history.type}`}>
+                          {history.amount > 0 ? '+' : ''}{history.amount.toLocaleString()}P
+                        </span>
+                        <span className="history-balance">잔액 {history.balance.toLocaleString()}P</span>
+                      </div>
+                    </div>
+                  ))}
+                {member.pointHistory.length === 0 && (
+                  <div className="empty-history">포인트 이력이 없습니다.</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
