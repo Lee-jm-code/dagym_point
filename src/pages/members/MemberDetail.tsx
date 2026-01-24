@@ -287,7 +287,9 @@ const MemberDetail = () => {
 
   const initialMember = mockMemberData[id || '2'] || mockMemberData['2'];
   const [memberProducts, setMemberProducts] = useState(initialMember.products);
-  const member = { ...initialMember, products: memberProducts };
+  const [memberPoints, setMemberPoints] = useState(initialMember.point);
+  const [memberPointHistory, setMemberPointHistory] = useState(initialMember.pointHistory);
+  const member = { ...initialMember, products: memberProducts, point: memberPoints, pointHistory: memberPointHistory };
 
   const productOptions = [
     '헬스 1개월',
@@ -306,7 +308,7 @@ const MemberDetail = () => {
 
   const handlePointsChange = (value: number) => {
     // 보유 포인트보다 크면 보유 포인트로 제한
-    const validValue = Math.min(Math.max(0, value), member.point);
+    const validValue = Math.min(Math.max(0, value), memberPoints);
     setProductForm(prev => ({ ...prev, usePoints: validValue }));
   };
 
@@ -352,6 +354,27 @@ const MemberDetail = () => {
     
     // 상품 목록에 추가
     setMemberProducts(prev => [...prev, newProduct]);
+    
+    // 포인트 사용 시 차감 및 이력 추가
+    if (productForm.usePoints > 0) {
+      const newBalance = memberPoints - productForm.usePoints;
+      setMemberPoints(newBalance);
+      
+      // 포인트 이력 추가
+      const now = new Date();
+      const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      const newPointHistory: PointHistory = {
+        id: `ph${Date.now()}`,
+        type: 'use',
+        amount: -productForm.usePoints,
+        balance: newBalance,
+        reason: `${productForm.product} 결제 사용`,
+        createdAt: dateTimeStr,
+      };
+      
+      setMemberPointHistory(prev => [newPointHistory, ...prev]);
+    }
     
     setShowProductModal(false);
     setProductForm({
