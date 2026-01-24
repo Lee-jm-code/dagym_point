@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ArrowLeft, X } from 'lucide-react';
 import './MemberDetail.css';
 
@@ -285,10 +285,45 @@ const MemberDetail = () => {
     usePoints: 0,
   });
 
-  const initialMember = mockMemberData[id || '2'] || mockMemberData['2'];
-  const [memberProducts, setMemberProducts] = useState(initialMember.products);
-  const [memberPoints, setMemberPoints] = useState(initialMember.point);
-  const [memberPointHistory, setMemberPointHistory] = useState(initialMember.pointHistory);
+  const memberId = id || '2';
+  const initialMember = mockMemberData[memberId] || mockMemberData['2'];
+  
+  // localStorage에서 데이터 불러오기
+  const getStoredData = <T,>(key: string, defaultValue: T): T => {
+    const stored = localStorage.getItem(`member_${memberId}_${key}`);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return defaultValue;
+      }
+    }
+    return defaultValue;
+  };
+  
+  const [memberProducts, setMemberProducts] = useState(() => 
+    getStoredData('products', initialMember.products)
+  );
+  const [memberPoints, setMemberPoints] = useState(() => 
+    getStoredData('points', initialMember.point)
+  );
+  const [memberPointHistory, setMemberPointHistory] = useState(() => 
+    getStoredData('pointHistory', initialMember.pointHistory)
+  );
+  
+  // 데이터 변경 시 localStorage에 저장
+  useEffect(() => {
+    localStorage.setItem(`member_${memberId}_products`, JSON.stringify(memberProducts));
+  }, [memberProducts, memberId]);
+  
+  useEffect(() => {
+    localStorage.setItem(`member_${memberId}_points`, JSON.stringify(memberPoints));
+  }, [memberPoints, memberId]);
+  
+  useEffect(() => {
+    localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify(memberPointHistory));
+  }, [memberPointHistory, memberId]);
+  
   const member = { ...initialMember, products: memberProducts, point: memberPoints, pointHistory: memberPointHistory };
 
   const productOptions = [
