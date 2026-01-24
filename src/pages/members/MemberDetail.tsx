@@ -303,7 +303,47 @@ const MemberDetail = () => {
   ];
 
   const handleProductFormChange = (field: string, value: string | number) => {
-    setProductForm(prev => ({ ...prev, [field]: value }));
+    setProductForm(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // 회원권 기간 선택 시 운동 시작일/종료일 자동 설정
+      if (field === 'membershipPeriod') {
+        const today = new Date();
+        const startDateStr = today.toISOString().split('T')[0];
+        updated.exerciseStartDate = startDateStr;
+        
+        // 종료일 계산
+        const endDate = new Date(today);
+        if (value === '1개월') {
+          endDate.setMonth(endDate.getMonth() + 1);
+        } else if (value === '3개월') {
+          endDate.setMonth(endDate.getMonth() + 3);
+        } else if (value === '6개월') {
+          endDate.setMonth(endDate.getMonth() + 6);
+        } else if (value === '12개월') {
+          endDate.setMonth(endDate.getMonth() + 12);
+        }
+        updated.exerciseEndDate = endDate.toISOString().split('T')[0];
+      }
+      
+      // 운동 시작일 변경 시 종료일도 자동 조정
+      if (field === 'exerciseStartDate' && prev.membershipPeriod) {
+        const startDate = new Date(value as string);
+        const endDate = new Date(startDate);
+        if (prev.membershipPeriod === '1개월') {
+          endDate.setMonth(endDate.getMonth() + 1);
+        } else if (prev.membershipPeriod === '3개월') {
+          endDate.setMonth(endDate.getMonth() + 3);
+        } else if (prev.membershipPeriod === '6개월') {
+          endDate.setMonth(endDate.getMonth() + 6);
+        } else if (prev.membershipPeriod === '12개월') {
+          endDate.setMonth(endDate.getMonth() + 12);
+        }
+        updated.exerciseEndDate = endDate.toISOString().split('T')[0];
+      }
+      
+      return updated;
+    });
   };
 
   const handlePointsChange = (value: number) => {
@@ -319,26 +359,15 @@ const MemberDetail = () => {
     const colors: ('yellow' | 'blue' | 'green' | 'purple')[] = ['yellow', 'blue', 'green', 'purple'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     
-    // 오늘 날짜 계산
-    const today = new Date();
-    const startDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+    // 운동 시작일/종료일 사용
+    const startDateObj = productForm.exerciseStartDate ? new Date(productForm.exerciseStartDate) : new Date();
+    const endDateObj = productForm.exerciseEndDate ? new Date(productForm.exerciseEndDate) : new Date();
     
-    // 종료일 계산 (기간에 따라)
-    let endDate = startDate;
-    let remainingDays = 30;
-    if (productForm.membershipPeriod === '1개월') {
-      remainingDays = 30;
-    } else if (productForm.membershipPeriod === '3개월') {
-      remainingDays = 90;
-    } else if (productForm.membershipPeriod === '6개월') {
-      remainingDays = 180;
-    } else if (productForm.membershipPeriod === '12개월') {
-      remainingDays = 365;
-    }
+    const startDate = `${startDateObj.getFullYear()}.${String(startDateObj.getMonth() + 1).padStart(2, '0')}.${String(startDateObj.getDate()).padStart(2, '0')}`;
+    const endDate = `${endDateObj.getFullYear()}.${String(endDateObj.getMonth() + 1).padStart(2, '0')}.${String(endDateObj.getDate()).padStart(2, '0')}`;
     
-    const endDateObj = new Date(today);
-    endDateObj.setDate(endDateObj.getDate() + remainingDays);
-    endDate = `${endDateObj.getFullYear()}.${String(endDateObj.getMonth() + 1).padStart(2, '0')}.${String(endDateObj.getDate()).padStart(2, '0')}`;
+    // 잔여일수 계산
+    const remainingDays = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
     
     // 새 상품 생성
     const newProduct = {
@@ -713,21 +742,21 @@ const MemberDetail = () => {
               <div className="form-group">
                 <label className="form-label">운동 기간</label>
                 <div className="date-range-row">
-                  <select
-                    className="form-select"
+                  <input
+                    type="date"
+                    className="form-date-input"
                     value={productForm.exerciseStartDate}
                     onChange={e => handleProductFormChange('exerciseStartDate', e.target.value)}
-                  >
-                    <option value="">운동 시작일</option>
-                  </select>
+                    placeholder="운동 시작일"
+                  />
                   <span className="date-separator">~</span>
-                  <select
-                    className="form-select dark"
+                  <input
+                    type="date"
+                    className="form-date-input dark"
                     value={productForm.exerciseEndDate}
                     onChange={e => handleProductFormChange('exerciseEndDate', e.target.value)}
-                  >
-                    <option value="">운동 종료일</option>
-                  </select>
+                    placeholder="운동 종료일"
+                  />
                 </div>
               </div>
 
