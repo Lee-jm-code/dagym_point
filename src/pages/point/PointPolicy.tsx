@@ -4,7 +4,7 @@ import type { PointPolicy as PointPolicyType } from '../../types/point';
 import './PointPolicy.css';
 
 const initialPolicy: PointPolicyType = {
-  expirationMonths: 60,
+  expirationMonths: 12,
   minUsageAmount: 100,
   maxUsagePerTransaction: 0,
   usableProducts: {
@@ -18,11 +18,27 @@ const initialPolicy: PointPolicyType = {
 const PointPolicy = () => {
   const [policy, setPolicy] = useState<PointPolicyType>(initialPolicy);
   const [isSaved, setIsSaved] = useState(false);
+  const [expirationError, setExpirationError] = useState<string | null>(null);
 
   const handleSave = () => {
     // 실제로는 API 호출
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
+  };
+
+  const handleExpirationChange = (value: string) => {
+    const numValue = parseInt(value) || 0;
+    
+    if (numValue < 12) {
+      setExpirationError('12개월 이하는 적용할 수 없습니다.');
+      return;
+    }
+    
+    setExpirationError(null);
+    setPolicy({
+      ...policy,
+      expirationMonths: numValue
+    });
   };
 
   const updateUsableProducts = (key: keyof PointPolicyType['usableProducts'], value: boolean) => {
@@ -60,48 +76,57 @@ const PointPolicy = () => {
               <div className="input-with-suffix">
                 <input
                   type="number"
-                  className="form-input"
+                  className={`form-input ${expirationError ? 'error' : ''}`}
                   value={policy.expirationMonths}
-                  onChange={e => setPolicy({
-                    ...policy,
-                    expirationMonths: Math.max(36, parseInt(e.target.value) || 36)
-                  })}
-                  min={36}
+                  onChange={e => handleExpirationChange(e.target.value)}
+                  min={12}
                 />
                 <span className="input-suffix">개월</span>
               </div>
               <p className="form-hint">
                 포인트 적립일 기준으로 유효기간이 적용됩니다.
               </p>
+              {expirationError && (
+                <p className="form-error">{expirationError}</p>
+              )}
             </div>
 
             <div className="warning-box">
               <AlertTriangle size={18} />
               <div className="warning-content">
                 <strong>법적 안내</strong>
-                <p>소비자 보호를 위해 최소 36개월(3년) 이상 설정이 필요합니다. 5년(60개월) 이상 권장됩니다.</p>
+                <p>소비자 보호를 위해 최소 12개월 이상 설정이 필요합니다. 5년(60개월) 이상 권장됩니다.</p>
               </div>
             </div>
 
             <div className="quick-select">
               <span className="quick-label">빠른 설정:</span>
               <button 
-                className={`quick-btn ${policy.expirationMonths === 36 ? 'active' : ''}`}
-                onClick={() => setPolicy({ ...policy, expirationMonths: 36 })}
+                className={`quick-btn ${policy.expirationMonths === 12 ? 'active' : ''}`}
+                onClick={() => {
+                  setExpirationError(null);
+                  setPolicy({ ...policy, expirationMonths: 12 });
+                }}
               >
-                3년
+                12개월
               </button>
               <button 
-                className={`quick-btn ${policy.expirationMonths === 60 ? 'active' : ''}`}
-                onClick={() => setPolicy({ ...policy, expirationMonths: 60 })}
+                className={`quick-btn ${policy.expirationMonths === 18 ? 'active' : ''}`}
+                onClick={() => {
+                  setExpirationError(null);
+                  setPolicy({ ...policy, expirationMonths: 18 });
+                }}
               >
-                5년
+                18개월
               </button>
               <button 
-                className={`quick-btn ${policy.expirationMonths === 120 ? 'active' : ''}`}
-                onClick={() => setPolicy({ ...policy, expirationMonths: 120 })}
+                className={`quick-btn ${policy.expirationMonths === 24 ? 'active' : ''}`}
+                onClick={() => {
+                  setExpirationError(null);
+                  setPolicy({ ...policy, expirationMonths: 24 });
+                }}
               >
-                10년
+                24개월
               </button>
             </div>
           </div>
