@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { Calendar, ShoppingBag, AlertTriangle, Save, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calendar, ShoppingBag, Save, CheckCircle } from 'lucide-react';
 import type { PointPolicy as PointPolicyType } from '../../types/point';
 import './PointPolicy.css';
+
+const STORAGE_KEY = 'point_policy';
 
 const initialPolicy: PointPolicyType = {
   expirationMonths: 12,
@@ -15,21 +17,61 @@ const initialPolicy: PointPolicyType = {
   },
 };
 
+const loadStoredPolicy = (): PointPolicyType => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Failed to load policy from localStorage:', e);
+  }
+  return initialPolicy;
+};
+
 const PointPolicy = () => {
-  const [policy, setPolicy] = useState<PointPolicyType>(initialPolicy);
+  const [policy, setPolicy] = useState<PointPolicyType>(() => loadStoredPolicy());
   const [isSaved, setIsSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [expirationInput, setExpirationInput] = useState<string>(() => {
+    const stored = loadStoredPolicy();
+    return String(stored.expirationMonths);
+  });
   const [expirationError, setExpirationError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const storedPolicy = loadStoredPolicy();
+    setPolicy(storedPolicy);
+    setExpirationInput(String(storedPolicy.expirationMonths));
+  }, []);
+
   const handleSave = () => {
-    // 실제로는 API 호출
+    const numValue = parseInt(expirationInput) || 0;
+    
+    if (expirationInput === '' || numValue < 12) {
+      setSaveError(true);
+      setTimeout(() => setSaveError(false), 3000);
+      return;
+    }
+    
+    const policyToSave = {
+      ...policy,
+      expirationMonths: numValue
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(policyToSave));
+    setPolicy(policyToSave);
+    
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
 
   const handleExpirationChange = (value: string) => {
+    setExpirationInput(value);
+    
     const numValue = parseInt(value) || 0;
     
-    if (numValue < 12) {
+    if (value === '' || numValue < 12) {
       setExpirationError('12개월 이하는 적용할 수 없습니다.');
       return;
     }
@@ -39,6 +81,12 @@ const PointPolicy = () => {
       ...policy,
       expirationMonths: numValue
     });
+  };
+
+  const handleQuickSelect = (months: number) => {
+    setExpirationInput(String(months));
+    setExpirationError(null);
+    setPolicy({ ...policy, expirationMonths: months });
   };
 
   const updateUsableProducts = (key: keyof PointPolicyType['usableProducts'], value: boolean) => {
@@ -77,7 +125,7 @@ const PointPolicy = () => {
                 <input
                   type="number"
                   className={`form-input ${expirationError ? 'error' : ''}`}
-                  value={policy.expirationMonths}
+                  value={expirationInput}
                   onChange={e => handleExpirationChange(e.target.value)}
                   min={12}
                 />
@@ -91,40 +139,23 @@ const PointPolicy = () => {
               )}
             </div>
 
-            <div className="warning-box">
-              <AlertTriangle size={18} />
-              <div className="warning-content">
-                <strong>법적 안내</strong>
-                <p>소비자 보호를 위해 최소 12개월 이상 설정이 필요합니다. 5년(60개월) 이상 권장됩니다.</p>
-              </div>
-            </div>
-
             <div className="quick-select">
               <span className="quick-label">빠른 설정:</span>
               <button 
-                className={`quick-btn ${policy.expirationMonths === 12 ? 'active' : ''}`}
-                onClick={() => {
-                  setExpirationError(null);
-                  setPolicy({ ...policy, expirationMonths: 12 });
-                }}
+                className={`quick-btn ${policy.expirationMonths === 12 && !expirationError ? 'active' : ''}`}
+                onClick={() => handleQuickSelect(12)}
               >
                 12개월
               </button>
               <button 
-                className={`quick-btn ${policy.expirationMonths === 18 ? 'active' : ''}`}
-                onClick={() => {
-                  setExpirationError(null);
-                  setPolicy({ ...policy, expirationMonths: 18 });
-                }}
+                className={`quick-btn ${policy.expirationMonths === 18 && !expirationError ? 'active' : ''}`}
+                onClick={() => handleQuickSelect(18)}
               >
                 18개월
               </button>
               <button 
-                className={`quick-btn ${policy.expirationMonths === 24 ? 'active' : ''}`}
-                onClick={() => {
-                  setExpirationError(null);
-                  setPolicy({ ...policy, expirationMonths: 24 });
-                }}
+                className={`quick-btn ${policy.expirationMonths === 24 && !expirationError ? 'active' : ''}`}
+                onClick={() => handleQuickSelect(24)}
               >
                 24개월
               </button>
@@ -268,6 +299,13 @@ const PointPolicy = () => {
         <div className="toast success">
           <CheckCircle size={20} />
           <span>정책이 저장되었습니다.</span>
+        </div>
+      )}
+
+      {/* 에러 토스트 */}
+      {saveError && (
+        <div className="toast error">
+          <span>유효기간은 12개월 이하는 적용할 수 없습니다.</span>
         </div>
       )}
     </div>

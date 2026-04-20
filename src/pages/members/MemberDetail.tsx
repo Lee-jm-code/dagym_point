@@ -134,7 +134,14 @@ const mockMemberData: Record<string, MemberInfo> = {
       totalPayment: 106000,
       paymentCount: 2,
     },
-    pointHistory: [],
+    pointHistory: [
+      { id: 'ph_t1', type: 'earn', amount: 3000, balance: 3000, reason: '신규 가입 포인트 지급', createdAt: '2026-01-10' },
+      { id: 'ph_t2', type: 'earn', amount: 2000, balance: 5000, reason: '출석 이벤트 포인트 지급', createdAt: '2026-02-15' },
+      { id: 'ph_t3', type: 'use', amount: -1500, balance: 3500, reason: 'PT 10회 결제 사용', createdAt: '2026-03-05' },
+      { id: 'ph_t4', type: 'earn', amount: 5000, balance: 8500, reason: '재등록 보너스 포인트 지급', createdAt: '2026-03-20' },
+      { id: 'ph_t5', type: 'use', amount: -3000, balance: 5500, reason: '헬스 3개월 결제 사용', createdAt: '2026-04-01' },
+      { id: 'ph_t6', type: 'use', amount: -500, balance: 5000, reason: '운동복 대여 결제 사용', createdAt: '2026-04-10' },
+    ],
   },
   '3': {
     id: '3',
@@ -972,16 +979,16 @@ const MemberDetail = () => {
                     <div key={history.id} className="point-history-item">
                       <div className="history-left">
                         <span className={`history-type ${history.type}`}>
-                          {history.type === 'earn' ? '적립' : '사용'}
+                          {history.type === 'earn' ? '지급' : '사용'}
                         </span>
                         <div className="history-info">
                           <span className="history-reason">{history.reason}</span>
-                          <span className="history-date">{history.createdAt}</span>
+                          <span className="history-date">{history.createdAt.split(' ')[0]}</span>
                         </div>
                       </div>
                       <div className="history-right">
                         <span className={`history-amount ${history.type}`}>
-                          {history.amount > 0 ? '+' : ''}{history.amount.toLocaleString()}P
+                          {history.type === 'earn' ? '+' : ''}{history.amount.toLocaleString()}P
                         </span>
                         <span className="history-balance">잔액 {history.balance.toLocaleString()}P</span>
                       </div>

@@ -997,8 +997,8 @@
 }
 
 .history-type.earn {
-  background: #ecfdf5;
-  color: #059669;
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .history-type.use {
@@ -1036,7 +1036,7 @@
 }
 
 .history-amount.earn {
-  color: #059669;
+  color: #2563eb;
 }
 
 .history-amount.use {
