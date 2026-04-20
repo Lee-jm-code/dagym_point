@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, X, Download } from 'lucide-react';
 import './Members.css';
@@ -18,7 +18,17 @@ interface Member {
   lockerNumber: string;
 }
 
-const mockMembers: Member[] = [
+interface StoredProduct {
+  id: string;
+  name: string;
+  type: string;
+  remainingDays: number;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
+const baseMockMembers: Member[] = [
   { id: '1', name: '상단확인용', phone: '010-****-5829', gender: '남', birthDate: '-', status: '미입력', lastAttendance: '-', membership: '-', expiryDate: '-', remainingDays: '-', remainingCount: '-', lockerNumber: '-' },
   { id: '2', name: 'test', phone: '010-****-7749', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.15', remainingDays: '29일', remainingCount: '-', lockerNumber: '-' },
   { id: '3', name: '제갈민주', phone: '010-****-9409', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '테스트100테스트 1회', expiryDate: '-', remainingDays: '-', remainingCount: '1회', lockerNumber: '-' },
@@ -43,6 +53,68 @@ const Members = () => {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [mockMembers, setMockMembers] = useState<Member[]>(baseMockMembers);
+
+  const loadMembersFromStorage = useCallback(() => {
+    const updated = baseMockMembers.map(member => {
+      try {
+        const stored = localStorage.getItem(`member_${member.id}_products`);
+        if (!stored) return member;
+        
+        const products: StoredProduct[] = JSON.parse(stored);
+        const activeProducts = products.filter(p => p.isActive);
+        
+        if (activeProducts.length === 0) return member;
+
+        const membershipNames = activeProducts.map(p => `${p.name} ${p.type}`).join('\n');
+
+        let latestExpiry = '-';
+        let maxRemainingDays = '-';
+        let totalRemainingCount = '-';
+
+        const productsWithExpiry = activeProducts.filter(p => p.endDate && p.endDate !== '-');
+        if (productsWithExpiry.length > 0) {
+          const sorted = [...productsWithExpiry].sort((a, b) => {
+            const dateA = new Date(a.endDate.replace(/\./g, '-'));
+            const dateB = new Date(b.endDate.replace(/\./g, '-'));
+            return dateB.getTime() - dateA.getTime();
+          });
+          latestExpiry = sorted[0].endDate;
+
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const expiryDate = new Date(sorted[0].endDate.replace(/\./g, '-'));
+          const diffDays = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          maxRemainingDays = `${Math.max(0, diffDays)}일`;
+        }
+
+        const countProducts = activeProducts.filter(p => p.type && p.type.includes('회'));
+        if (countProducts.length > 0) {
+          const totalCount = countProducts.reduce((sum, p) => {
+            const match = p.type.match(/(\d+)회/);
+            return sum + (match ? parseInt(match[1]) : 0);
+          }, 0);
+          if (totalCount > 0) totalRemainingCount = `${totalCount}회`;
+        }
+
+        return {
+          ...member,
+          status: '유효' as const,
+          membership: membershipNames,
+          expiryDate: latestExpiry,
+          remainingDays: maxRemainingDays,
+          remainingCount: totalRemainingCount,
+        };
+      } catch {
+        return member;
+      }
+    });
+    setMockMembers(updated);
+  }, []);
+
+  useEffect(() => {
+    loadMembersFromStorage();
+  }, [loadMembersFromStorage]);
 
   const handleMemberClick = (member: Member) => {
     navigate(`/members/${member.id}`);

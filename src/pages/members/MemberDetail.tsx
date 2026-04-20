@@ -35,6 +35,9 @@ interface MemberInfo {
     startDate: string;
     endDate: string;
     isActive: boolean;
+    usedPoints?: number;
+    salePrice?: number;
+    receivedAmount?: number;
   }[];
   attendanceRecords: {
     date: string;
@@ -276,6 +279,7 @@ const MemberDetail = () => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showPointHistory, setShowPointHistory] = useState(false);
   const [productMenuOpen, setProductMenuOpen] = useState<string | null>(null);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   
   // 상품 배정 폼 상태
   const [productForm, setProductForm] = useState({
@@ -343,6 +347,38 @@ const MemberDetail = () => {
     setMemberPointHistory(loadStoredPointHistory());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
+
+  // 포인트 음수 보정 및 잘못된 이력 정리
+  useEffect(() => {
+    const storedHistory = localStorage.getItem(`member_${memberId}_pointHistory`);
+    if (storedHistory) {
+      try {
+        const history = JSON.parse(storedHistory);
+        const cleaned = history.filter((h: PointHistory) => !h.reason.includes('결제 수정 사용'));
+        if (cleaned.length !== history.length) {
+          localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify(cleaned));
+          setMemberPointHistory(cleaned);
+          
+          // 포인트 잔액 재계산
+          let balance = 0;
+          const sorted = [...cleaned].sort((a: PointHistory, b: PointHistory) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          sorted.forEach((h: PointHistory) => {
+            balance += h.amount;
+          });
+          const finalBalance = Math.max(0, balance);
+          localStorage.setItem(`member_${memberId}_points`, JSON.stringify(finalBalance));
+          setMemberPoints(finalBalance);
+        }
+      } catch { /* ignore */ }
+    }
+    
+    if (memberPoints < 0) {
+      setMemberPoints(0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // 데이터 변경 시 localStorage에 저장
   useEffect(() => {
@@ -359,20 +395,45 @@ const MemberDetail = () => {
   
   const member = { ...initialMember, products: memberProducts, point: memberPoints, pointHistory: memberPointHistory };
 
-  const productOptions = [
-    '헬스 1개월',
-    '헬스 3개월',
-    '헬스 6개월',
-    '헬스 12개월',
-    'PT 10회',
-    'PT 20회',
-    '운동복 대여',
-    '락커 이용권',
-  ];
+  const productPriceMap: Record<string, number> = {
+    '헬스 1개월': 100000,
+    '헬스 3개월': 200000,
+    '헬스 6개월': 350000,
+    '헬스 12개월': 500000,
+    'PT 10회': 800000,
+    'PT 20회': 1300000,
+    '운동복 대여': 0,
+    '락커 이용권': 0,
+  };
+
+  const productOptions = Object.keys(productPriceMap);
 
   const handleProductFormChange = (field: string, value: string | number) => {
     setProductForm(prev => {
       const updated = { ...prev, [field]: value };
+
+      if (field === 'product') {
+        const price = productPriceMap[value as string] || 0;
+        updated.productPrice = price;
+        updated.salePrice = price;
+        updated.receivedAmount = price;
+
+        const periodMap: Record<string, string> = {
+          '헬스 1개월': '1개월',
+          '헬스 3개월': '3개월',
+          '헬스 6개월': '6개월',
+          '헬스 12개월': '12개월',
+        };
+        if (periodMap[value as string]) {
+          updated.membershipPeriod = periodMap[value as string];
+          const today = new Date();
+          updated.exerciseStartDate = today.toISOString().split('T')[0];
+          const endDate = new Date(today);
+          const months = parseInt(periodMap[value as string]);
+          endDate.setMonth(endDate.getMonth() + months);
+          updated.exerciseEndDate = endDate.toISOString().split('T')[0];
+        }
+      }
       
       // 회원권 기간 선택 시 운동 시작일/종료일 자동 설정
       if (field === 'membershipPeriod') {
@@ -437,6 +498,9 @@ const MemberDetail = () => {
     // 잔여일수 계산
     const remainingDays = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
     
+    const actualSalePrice = Math.max(0, productForm.salePrice - productForm.usePoints);
+    const actualReceivedAmount = Math.max(0, productForm.receivedAmount - productForm.usePoints);
+
     // 새 상품 생성
     const newProduct = {
       id: `p${Date.now()}`,
@@ -447,6 +511,9 @@ const MemberDetail = () => {
       startDate: startDate,
       endDate: endDate,
       isActive: true,
+      usedPoints: productForm.usePoints,
+      salePrice: actualSalePrice,
+      receivedAmount: actualReceivedAmount,
     };
     
     // 상품 목록에 추가
@@ -454,7 +521,7 @@ const MemberDetail = () => {
     
     // 포인트 사용 시 차감 및 이력 추가
     if (productForm.usePoints > 0) {
-      const newBalance = memberPoints - productForm.usePoints;
+      const newBalance = Math.max(0, memberPoints - productForm.usePoints);
       setMemberPoints(newBalance);
       
       // 포인트 이력 추가
@@ -489,7 +556,141 @@ const MemberDetail = () => {
     });
   };
 
+  const handleEditProduct = (productId: string) => {
+    const product = memberProducts.find(p => p.id === productId);
+    if (!product) return;
+    
+    const price = productPriceMap[product.name] || 0;
+    const startDate = product.startDate.replace(/\./g, '-');
+    const endDate = product.endDate.replace(/\./g, '-');
+
+    let usedPoints = product.usedPoints || 0;
+
+    if (usedPoints === 0) {
+      const matchingHistory = memberPointHistory.find(
+        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
+      );
+      if (matchingHistory) {
+        usedPoints = Math.abs(matchingHistory.amount);
+      }
+    }
+
+    const savedSalePrice = product.salePrice !== undefined ? product.salePrice : Math.max(0, price - usedPoints);
+    const savedReceivedAmount = product.receivedAmount !== undefined ? product.receivedAmount : Math.max(0, price - usedPoints);
+    
+    setProductForm({
+      product: product.name,
+      membershipPeriod: product.type,
+      salesManager: '',
+      exerciseStartDate: startDate,
+      exerciseEndDate: endDate === '-' ? '' : endDate,
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: '카드',
+      productPrice: price,
+      salePrice: savedSalePrice,
+      receivedAmount: savedReceivedAmount,
+      usePoints: usedPoints,
+    });
+    
+    setEditingProductId(productId);
+    setShowProductModal(true);
+    setProductMenuOpen(null);
+  };
+
+  const handleUpdateProduct = () => {
+    if (!editingProductId) return;
+    
+    const startDateObj = productForm.exerciseStartDate ? new Date(productForm.exerciseStartDate) : new Date();
+    const endDateObj = productForm.exerciseEndDate ? new Date(productForm.exerciseEndDate) : new Date();
+    
+    const startDate = `${startDateObj.getFullYear()}.${String(startDateObj.getMonth() + 1).padStart(2, '0')}.${String(startDateObj.getDate()).padStart(2, '0')}`;
+    const endDate = `${endDateObj.getFullYear()}.${String(endDateObj.getMonth() + 1).padStart(2, '0')}.${String(endDateObj.getDate()).padStart(2, '0')}`;
+    const remainingDays = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
+    
+    setMemberProducts(prev => prev.map(p => {
+      if (p.id === editingProductId) {
+        return {
+          ...p,
+          type: productForm.membershipPeriod || p.type,
+          remainingDays,
+          startDate,
+          endDate,
+          salePrice: productForm.salePrice,
+          receivedAmount: productForm.receivedAmount,
+        };
+      }
+      return p;
+    }));
+    
+    if (productForm.usePoints > 0) {
+      const newBalance = memberPoints - productForm.usePoints;
+      setMemberPoints(newBalance);
+      
+      const now = new Date();
+      const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      
+      const newPointHistory: PointHistory = {
+        id: `ph${Date.now()}`,
+        type: 'use',
+        amount: -productForm.usePoints,
+        balance: newBalance,
+        reason: `${productForm.product} 결제 수정 사용`,
+        createdAt: dateTimeStr,
+      };
+      
+      setMemberPointHistory(prev => [newPointHistory, ...prev]);
+    }
+    
+    setShowProductModal(false);
+    setEditingProductId(null);
+    setProductForm({
+      product: '',
+      membershipPeriod: '',
+      salesManager: '',
+      exerciseStartDate: '',
+      exerciseEndDate: '',
+      paymentDate: new Date().toISOString().split('T')[0],
+      paymentMethod: '카드',
+      productPrice: 0,
+      salePrice: 0,
+      receivedAmount: 0,
+      usePoints: 0,
+    });
+  };
+
+  const refundProductPoints = (productId: string) => {
+    const product = memberProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    let usedPoints = product.usedPoints || 0;
+
+    if (usedPoints === 0) {
+      const matchingHistory = memberPointHistory.find(
+        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
+      );
+      if (matchingHistory) {
+        usedPoints = Math.abs(matchingHistory.amount);
+      }
+    }
+
+    if (usedPoints > 0) {
+      // 해당 상품의 결제 사용 이력 삭제
+      setMemberPointHistory(prev => 
+        prev.filter(h => !(h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')))
+      );
+      // 포인트 반환
+      setMemberPoints(prev => prev + usedPoints);
+    }
+  };
+
+  const handleRefundProduct = (productId: string) => {
+    refundProductPoints(productId);
+    setMemberProducts(prev => prev.filter(p => p.id !== productId));
+    setProductMenuOpen(null);
+  };
+
   const handleDeleteProduct = (productId: string) => {
+    refundProductPoints(productId);
     setMemberProducts(prev => prev.filter(p => p.id !== productId));
     setProductMenuOpen(null);
   };
@@ -615,7 +816,7 @@ const MemberDetail = () => {
                 지난 상품
               </button>
             </div>
-            <button className="add-btn" onClick={() => setShowProductModal(true)}><Plus size={20} /></button>
+            <button className="add-btn" onClick={() => { setEditingProductId(null); setShowProductModal(true); }}><Plus size={20} /></button>
           </div>
           <div className="product-list">
             {(activeProductTab === 'active' ? activeProducts : pastProducts).length > 0 ? (
@@ -647,8 +848,8 @@ const MemberDetail = () => {
                         <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>홀딩</button>
                         <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>기간 연장</button>
                         <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>양도</button>
-                        <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>결제 수정</button>
-                        <button className="dropdown-item refund" onClick={() => setProductMenuOpen(null)}>환불</button>
+                        <button className="dropdown-item" onClick={() => handleEditProduct(product.id)}>결제 수정</button>
+                        <button className="dropdown-item refund" onClick={() => handleRefundProduct(product.id)}>환불</button>
                         <button className="dropdown-item delete" onClick={() => handleDeleteProduct(product.id)}>상품 삭제(결제취소)</button>
                       </div>
                     )}
@@ -757,23 +958,29 @@ const MemberDetail = () => {
         </div>
       </div>
 
-      {/* 상품 배정 모달 */}
+      {/* 상품 배정/수정 모달 */}
       {showProductModal && (
-        <div className="modal-overlay" onClick={() => setShowProductModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowProductModal(false); setEditingProductId(null); }}>
           <div className="product-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-body">
               {/* 상품 선택 */}
               <div className="form-group">
-                <select
-                  className="form-select full-width"
-                  value={productForm.product}
-                  onChange={e => handleProductFormChange('product', e.target.value)}
-                >
-                  <option value="">상품을 선택해주세요</option>
-                  {productOptions.map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+                {editingProductId ? (
+                  <div className="form-select full-width disabled-select">
+                    {productForm.product}
+                  </div>
+                ) : (
+                  <select
+                    className="form-select full-width"
+                    value={productForm.product}
+                    onChange={e => handleProductFormChange('product', e.target.value)}
+                  >
+                    <option value="">상품을 선택해주세요</option>
+                    {productOptions.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* 회원권 기간 선택, 결제와 세일즈 담당자 */}
@@ -868,7 +1075,7 @@ const MemberDetail = () => {
                     <input
                       type="text"
                       className="price-input"
-                      value={productForm.productPrice}
+                      value={productForm.productPrice.toLocaleString()}
                       readOnly
                     />
                     <span className="price-suffix">원</span>
@@ -878,14 +1085,17 @@ const MemberDetail = () => {
                   <label className="form-label">판매금액</label>
                   <div className="price-input-wrapper">
                     <input
-                      type="number"
+                      type="text"
                       className="price-input"
-                      value={productForm.salePrice || ''}
-                      onChange={e => handleProductFormChange('salePrice', parseInt(e.target.value) || 0)}
+                      value={productForm.salePrice ? productForm.salePrice.toLocaleString() : ''}
+                      onChange={e => {
+                        const num = parseInt(e.target.value.replace(/,/g, '')) || 0;
+                        handleProductFormChange('salePrice', num);
+                      }}
                     />
                     <span className="price-suffix">원</span>
                   </div>
-                  {productForm.usePoints > 0 && (
+                  {!editingProductId && productForm.usePoints > 0 && (
                     <span className="price-discount">포인트 적용: {finalSalePrice.toLocaleString()}원</span>
                   )}
                 </div>
@@ -893,64 +1103,86 @@ const MemberDetail = () => {
                   <label className="form-label">받은 금액</label>
                   <div className="price-input-wrapper">
                     <input
-                      type="number"
+                      type="text"
                       className="price-input"
-                      value={productForm.receivedAmount || ''}
-                      onChange={e => handleProductFormChange('receivedAmount', parseInt(e.target.value) || 0)}
+                      value={productForm.receivedAmount ? productForm.receivedAmount.toLocaleString() : ''}
+                      onChange={e => {
+                        const num = parseInt(e.target.value.replace(/,/g, '')) || 0;
+                        handleProductFormChange('receivedAmount', num);
+                      }}
                     />
                     <span className="price-suffix">원</span>
                   </div>
-                  {productForm.usePoints > 0 && (
+                  {!editingProductId && productForm.usePoints > 0 && (
                     <span className="price-discount">포인트 적용: {finalReceivedAmount.toLocaleString()}원</span>
                   )}
                 </div>
               </div>
 
-              {/* 포인트 사용 */}
-              <div className="point-usage-section">
-                <div className="point-usage-header">
-                  <label className="form-label">포인트 사용</label>
-                  <span className="available-points">
-                    사용 가능: <strong>{member.point.toLocaleString()}P</strong>
-                  </span>
-                </div>
-                <div className="point-usage-input-row">
-                  <div className="price-input-wrapper point-input-wrapper">
+              {/* 포인트: 배정 시 입력 가능, 수정 시 조회만 */}
+              {editingProductId ? (
+                <div className="point-usage-section">
+                  <div className="point-usage-header">
+                    <label className="form-label">사용된 포인트</label>
+                  </div>
+                  <div className="price-input-wrapper disabled">
                     <input
-                      type="number"
+                      type="text"
                       className="price-input"
-                      value={productForm.usePoints || ''}
-                      onChange={e => handlePointsChange(parseInt(e.target.value) || 0)}
-                      placeholder="0"
-                      max={member.point}
+                      value={productForm.usePoints ? productForm.usePoints.toLocaleString() : '0'}
+                      readOnly
                     />
                     <span className="price-suffix">P</span>
                   </div>
-                  <button 
-                    type="button" 
-                    className="use-all-points-btn"
-                    onClick={() => handlePointsChange(member.point)}
-                  >
-                    전액 사용
-                  </button>
                 </div>
-                {productForm.usePoints > member.point && (
-                  <span className="point-error">보유 포인트를 초과할 수 없습니다.</span>
-                )}
-              </div>
+              ) : (
+                <div className="point-usage-section">
+                  <div className="point-usage-header">
+                    <label className="form-label">포인트 사용</label>
+                    <span className="available-points">
+                      사용 가능: <strong>{member.point.toLocaleString()}P</strong>
+                    </span>
+                  </div>
+                  <div className="point-usage-input-row">
+                    <div className="price-input-wrapper point-input-wrapper">
+                      <input
+                        type="text"
+                        className="price-input"
+                        value={productForm.usePoints ? productForm.usePoints.toLocaleString() : ''}
+                        onChange={e => {
+                          const num = parseInt(e.target.value.replace(/,/g, '')) || 0;
+                          handlePointsChange(num);
+                        }}
+                        placeholder="0"
+                      />
+                      <span className="price-suffix">P</span>
+                    </div>
+                    <button 
+                      type="button" 
+                      className="use-all-points-btn"
+                      onClick={() => handlePointsChange(member.point)}
+                    >
+                      전액 사용
+                    </button>
+                  </div>
+                  {productForm.usePoints > member.point && (
+                    <span className="point-error">보유 포인트를 초과할 수 없습니다.</span>
+                  )}
+                </div>
+              )}
 
               {/* 결제수단 추가 버튼 */}
               <button className="add-payment-btn">결제수단 추가</button>
             </div>
 
             <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setShowProductModal(false)}>취소</button>
+              <button className="btn-cancel" onClick={() => { setShowProductModal(false); setEditingProductId(null); }}>취소</button>
               <button 
                 className="btn-assign"
-                onClick={handleAssignProduct}
+                onClick={editingProductId ? handleUpdateProduct : handleAssignProduct}
                 disabled={!productForm.product}
               >
-                배정하기
+                {editingProductId ? '수정하기' : '배정하기'}
               </button>
             </div>
           </div>

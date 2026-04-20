@@ -608,6 +608,19 @@
   width: 100%;
 }
 
+.product-modal .disabled-select {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: default;
+}
+
 .product-modal .form-select.dark {
   background-color: #f5f5f5;
 }
