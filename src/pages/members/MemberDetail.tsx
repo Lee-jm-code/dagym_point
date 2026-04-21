@@ -280,6 +280,13 @@ const MemberDetail = () => {
   const [showPointHistory, setShowPointHistory] = useState(false);
   const [productMenuOpen, setProductMenuOpen] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundProductId, setRefundProductId] = useState<string | null>(null);
+  const [refundDate, setRefundDate] = useState(new Date().toISOString().split('T')[0]);
+  const [refundMethod, setRefundMethod] = useState('카드');
+  const [refundAmount, setRefundAmount] = useState(0);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundChecked, setRefundChecked] = useState<Record<string, boolean>>({});
   
   // 상품 배정 폼 상태
   const [productForm, setProductForm] = useState({
@@ -683,14 +690,105 @@ const MemberDetail = () => {
     }
   };
 
-  const handleRefundProduct = (productId: string) => {
-    refundProductPoints(productId);
-    setMemberProducts(prev => prev.filter(p => p.id !== productId));
+  const handleOpenRefundModal = (productId: string) => {
+    const product = memberProducts.find(p => p.id === productId);
+    if (!product) return;
+    
+    const price = product.salePrice !== undefined ? product.salePrice : (productPriceMap[product.name] || 0);
+    
+    setRefundProductId(productId);
+    setRefundDate(new Date().toISOString().split('T')[0]);
+    setRefundMethod('카드');
+    setRefundAmount(price);
+    setRefundReason('');
+    setRefundChecked({ [productId]: true });
+    setShowRefundModal(true);
     setProductMenuOpen(null);
   };
 
+  const handleConfirmRefund = () => {
+    if (!refundProductId) return;
+    
+    const product = memberProducts.find(p => p.id === refundProductId);
+    if (!product) return;
+
+    let usedPoints = product.usedPoints || 0;
+    if (usedPoints === 0) {
+      const matchingHistory = memberPointHistory.find(
+        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
+      );
+      if (matchingHistory) {
+        usedPoints = Math.abs(matchingHistory.amount);
+      }
+    }
+
+    // 사용 포인트 전액 반환 및 이력 기록
+    if (usedPoints > 0) {
+      // 기존 결제 사용 이력 삭제
+      setMemberPointHistory(prev =>
+        prev.filter(h => !(h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')))
+      );
+
+      const newBalance = memberPoints + usedPoints;
+      setMemberPoints(newBalance);
+      
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      
+      setMemberPointHistory(prev => [{
+        id: `ph${Date.now()}`,
+        type: 'earn' as const,
+        amount: usedPoints,
+        balance: newBalance,
+        reason: '회원권 환불',
+        createdAt: dateStr,
+      }, ...prev]);
+    }
+
+    setMemberProducts(prev => prev.filter(p => p.id !== refundProductId));
+    setShowRefundModal(false);
+    setRefundProductId(null);
+  };
+
   const handleDeleteProduct = (productId: string) => {
-    refundProductPoints(productId);
+    const product = memberProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    let usedPoints = product.usedPoints || 0;
+    if (usedPoints === 0) {
+      const matchingHistory = memberPointHistory.find(
+        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
+      );
+      if (matchingHistory) {
+        usedPoints = Math.abs(matchingHistory.amount);
+      }
+    }
+
+    // 기존 결제 사용 이력 삭제
+    if (usedPoints > 0) {
+      setMemberPointHistory(prev =>
+        prev.filter(h => !(h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')))
+      );
+    }
+
+    // 전액 포인트 반환 및 이력 기록
+    if (usedPoints > 0) {
+      const newBalance = memberPoints + usedPoints;
+      setMemberPoints(newBalance);
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      setMemberPointHistory(prev => [{
+        id: `ph${Date.now()}`,
+        type: 'earn' as const,
+        amount: usedPoints,
+        balance: newBalance,
+        reason: `${product.name} 결제취소 포인트 반환`,
+        createdAt: dateStr,
+      }, ...prev]);
+    }
+
     setMemberProducts(prev => prev.filter(p => p.id !== productId));
     setProductMenuOpen(null);
   };
@@ -849,7 +947,7 @@ const MemberDetail = () => {
                         <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>기간 연장</button>
                         <button className="dropdown-item" onClick={() => setProductMenuOpen(null)}>양도</button>
                         <button className="dropdown-item" onClick={() => handleEditProduct(product.id)}>결제 수정</button>
-                        <button className="dropdown-item refund" onClick={() => handleRefundProduct(product.id)}>환불</button>
+                        <button className="dropdown-item refund" onClick={() => handleOpenRefundModal(product.id)}>환불</button>
                         <button className="dropdown-item delete" onClick={() => handleDeleteProduct(product.id)}>상품 삭제(결제취소)</button>
                       </div>
                     )}
@@ -1234,6 +1332,174 @@ const MemberDetail = () => {
           </div>
         </div>
       )}
+
+      {/* 환불 모달 */}
+      {showRefundModal && refundProductId && (() => {
+        const refundProduct = memberProducts.find(p => p.id === refundProductId);
+        if (!refundProduct) return null;
+        
+        const productPrice = refundProduct.salePrice !== undefined 
+          ? refundProduct.salePrice 
+          : (productPriceMap[refundProduct.name] || 0);
+        const usedPoints = refundProduct.usedPoints || 0;
+        const totalPaid = productPrice + usedPoints;
+        
+        const allRefundProducts = memberProducts.filter(p => 
+          p.startDate === refundProduct.startDate && p.isActive
+        );
+        
+        const totalRefundable = allRefundProducts.reduce((sum, p) => {
+          const price = p.salePrice !== undefined ? p.salePrice : (productPriceMap[p.name] || 0);
+          return sum + price;
+        }, 0);
+
+        const checkedProducts = allRefundProducts.filter(p => refundChecked[p.id]);
+        const totalCheckedAmount = checkedProducts.reduce((sum, p) => {
+          const price = p.salePrice !== undefined ? p.salePrice : (productPriceMap[p.name] || 0);
+          return sum + price;
+        }, 0);
+
+        return (
+          <div className="modal-overlay" onClick={() => setShowRefundModal(false)}>
+            <div className="refund-modal" onClick={e => e.stopPropagation()}>
+              <h2 className="refund-modal-title">환불하기</h2>
+
+              <div className="refund-layout">
+                <div className="refund-left">
+                  <h4 className="refund-section-title">환불할 상품</h4>
+
+                  {allRefundProducts.map(p => {
+                    const pPrice = p.salePrice !== undefined ? p.salePrice : (productPriceMap[p.name] || 0);
+                    const isChecked = !!refundChecked[p.id];
+                    return (
+                      <div key={p.id} className="refund-product-item">
+                        <div className="refund-product-header">
+                          <label className="refund-checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={e => {
+                                const newChecked = { ...refundChecked, [p.id]: e.target.checked };
+                                setRefundChecked(newChecked);
+                                const newTotal = allRefundProducts
+                                  .filter(pr => newChecked[pr.id])
+                                  .reduce((s, pr) => {
+                                    const pp = pr.salePrice !== undefined ? pr.salePrice : (productPriceMap[pr.name] || 0);
+                                    return s + pp;
+                                  }, 0);
+                                setRefundAmount(newTotal);
+                              }}
+                            />
+                            <span className="refund-checkbox-custom" />
+                          </label>
+                          <div className="refund-product-info">
+                            <div className="refund-product-avatar" />
+                            <span className="refund-product-name">
+                              {member.name}
+                            </span>
+                            <span className="refund-product-detail">
+                              {p.name}({p.type}) {pPrice.toLocaleString()}원 {p.startDate} 결제
+                            </span>
+                            <span className="refund-payment-badge">카드</span>
+                          </div>
+                        </div>
+
+                        {isChecked && (
+                          <div className="refund-detail-row">
+                            <div className="refund-detail-item">
+                              <label className="refund-detail-label">환불날짜</label>
+                              <input
+                                type="date"
+                                className="refund-detail-input"
+                                value={refundDate}
+                                onChange={e => setRefundDate(e.target.value)}
+                              />
+                            </div>
+                            <div className="refund-detail-item">
+                              <label className="refund-detail-label">환불수단</label>
+                              <select
+                                className="refund-detail-select"
+                                value={refundMethod}
+                                onChange={e => setRefundMethod(e.target.value)}
+                              >
+                                <option value="카드">카드</option>
+                                <option value="계좌이체">계좌이체</option>
+                                <option value="현금">현금</option>
+                              </select>
+                            </div>
+                            <div className="refund-detail-item">
+                              <label className="refund-detail-label highlight">환불가능금액</label>
+                              <div className="refund-amount-display">
+                                {pPrice.toLocaleString()} 원
+                              </div>
+                            </div>
+                            <div className="refund-detail-item">
+                              <label className="refund-detail-label">환불금액</label>
+                              <div className="refund-amount-input-wrapper">
+                                <input
+                                  type="text"
+                                  className="refund-amount-input"
+                                  value={refundAmount.toLocaleString()}
+                                  onChange={e => {
+                                    const num = parseInt(e.target.value.replace(/,/g, '')) || 0;
+                                    setRefundAmount(num);
+                                  }}
+                                />
+                                <span className="refund-amount-suffix">원</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="refund-reason-section">
+                    <label className="refund-reason-label">환불사유(선택)</label>
+                    <input
+                      type="text"
+                      className="refund-reason-input"
+                      placeholder="텍스트를 입력해 주세요."
+                      value={refundReason}
+                      onChange={e => setRefundReason(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="refund-right">
+                  <div className="refund-summary-card">
+                    <div className="refund-summary-row">
+                      <span className="refund-summary-label">총 결제금액</span>
+                      <span className="refund-summary-value">{totalPaid.toLocaleString()}원</span>
+                    </div>
+                  </div>
+                  {usedPoints > 0 && (
+                    <div className="refund-summary-card">
+                      <div className="refund-summary-row">
+                        <span className="refund-summary-label">사용 포인트</span>
+                        <span className="refund-summary-value">{usedPoints.toLocaleString()}P</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="refund-summary-card highlight">
+                    <div className="refund-summary-row">
+                      <span className="refund-summary-label">총 환불가능금액</span>
+                      <span className="refund-summary-value highlight">{totalRefundable.toLocaleString()}원</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="refund-modal-footer">
+                <button className="btn-cancel" onClick={() => setShowRefundModal(false)}>취소</button>
+                <button className="btn-refund-confirm" onClick={handleConfirmRefund}>
+                  {refundAmount.toLocaleString()}원 환불하기
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
