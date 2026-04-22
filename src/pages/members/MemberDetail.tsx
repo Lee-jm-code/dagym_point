@@ -12,6 +12,20 @@ interface PointHistory {
   createdAt: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  type: string;
+  color: 'yellow' | 'blue' | 'green' | 'purple';
+  remainingDays: number;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  usedPoints?: number;
+  salePrice?: number;
+  receivedAmount?: number;
+}
+
 interface MemberInfo {
   id: string;
   name: string;
@@ -26,19 +40,7 @@ interface MemberInfo {
   accessInfo: boolean;
   point: number;
   registeredAt: string;
-  products: {
-    id: string;
-    name: string;
-    type: string;
-    color: 'yellow' | 'blue' | 'green' | 'purple';
-    remainingDays: number;
-    startDate: string;
-    endDate: string;
-    isActive: boolean;
-    usedPoints?: number;
-    salePrice?: number;
-    receivedAmount?: number;
-  }[];
+  products: Product[];
   attendanceRecords: {
     date: string;
     time: string;
@@ -87,8 +89,8 @@ const mockMemberData: Record<string, MemberInfo> = {
       paymentCount: 0,
     },
     pointHistory: [
-      { id: 'ph1', type: 'earn', amount: 5000, balance: 5000, reason: '새해 이벤트 포인트', createdAt: '2026-01-01 10:00' },
       { id: 'ph2', type: 'use', amount: -3000, balance: 2000, reason: '포인트 사용', createdAt: '2026-01-20 14:30' },
+      { id: 'ph1', type: 'earn', amount: 5000, balance: 5000, reason: '새해 이벤트 포인트', createdAt: '2026-01-01 10:00' },
     ],
   },
   '2': {
@@ -138,11 +140,11 @@ const mockMemberData: Record<string, MemberInfo> = {
       paymentCount: 2,
     },
     pointHistory: [
-      { id: 'ph_t1', type: 'earn', amount: 3000, balance: 3000, reason: '신규 가입 포인트 지급', createdAt: '2026-01-10' },
-      { id: 'ph_t2', type: 'earn', amount: 2000, balance: 5000, reason: '출석 이벤트 포인트 지급', createdAt: '2026-02-15' },
-      { id: 'ph_t3', type: 'use', amount: -1500, balance: 3500, reason: 'PT 10회 결제 사용', createdAt: '2026-03-05' },
-      { id: 'ph_t4', type: 'earn', amount: 5000, balance: 8500, reason: '재등록 보너스 포인트 지급', createdAt: '2026-03-20' },
       { id: 'ph_t5', type: 'use', amount: -3000, balance: 5500, reason: '헬스 3개월 결제 사용', createdAt: '2026-04-01' },
+      { id: 'ph_t4', type: 'earn', amount: 5000, balance: 8500, reason: '재등록 보너스 포인트 지급', createdAt: '2026-03-20' },
+      { id: 'ph_t3', type: 'use', amount: -1500, balance: 3500, reason: 'PT 10회 결제 사용', createdAt: '2026-03-05' },
+      { id: 'ph_t2', type: 'earn', amount: 2000, balance: 5000, reason: '출석 이벤트 포인트 지급', createdAt: '2026-02-15' },
+      { id: 'ph_t1', type: 'earn', amount: 3000, balance: 3000, reason: '신규 가입 포인트 지급', createdAt: '2026-01-10' },
       { id: 'ph_t6', type: 'use', amount: -500, balance: 5000, reason: '운동복 대여 결제 사용', createdAt: '2026-04-10' },
     ],
   },
@@ -307,11 +309,11 @@ const MemberDetail = () => {
   const initialMember = mockMemberData[memberId] || mockMemberData['2'];
   
   // localStorage에서 데이터 불러오기 (컴포넌트 외부에서 즉시 실행)
-  const loadStoredProducts = () => {
+  const loadStoredProducts = (): Product[] => {
     const stored = localStorage.getItem(`member_${memberId}_products`);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        return JSON.parse(stored) as Product[];
       } catch {
         return initialMember.products;
       }
@@ -319,11 +321,11 @@ const MemberDetail = () => {
     return initialMember.products;
   };
   
-  const loadStoredPoints = () => {
+  const loadStoredPoints = (): number => {
     const stored = localStorage.getItem(`member_${memberId}_points`);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        return JSON.parse(stored) as number;
       } catch {
         return initialMember.point;
       }
@@ -331,11 +333,11 @@ const MemberDetail = () => {
     return initialMember.point;
   };
   
-  const loadStoredPointHistory = () => {
+  const loadStoredPointHistory = (): PointHistory[] => {
     const stored = localStorage.getItem(`member_${memberId}_pointHistory`);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        return JSON.parse(stored) as PointHistory[];
       } catch {
         return initialMember.pointHistory;
       }
@@ -343,9 +345,9 @@ const MemberDetail = () => {
     return initialMember.pointHistory;
   };
   
-  const [memberProducts, setMemberProducts] = useState(loadStoredProducts);
-  const [memberPoints, setMemberPoints] = useState(loadStoredPoints);
-  const [memberPointHistory, setMemberPointHistory] = useState(loadStoredPointHistory);
+  const [memberProducts, setMemberProducts] = useState<Product[]>(loadStoredProducts);
+  const [memberPoints, setMemberPoints] = useState<number>(loadStoredPoints);
+  const [memberPointHistory, setMemberPointHistory] = useState<PointHistory[]>(loadStoredPointHistory);
   
   // memberId 변경 시 데이터 다시 로드
   useEffect(() => {
@@ -665,31 +667,6 @@ const MemberDetail = () => {
     });
   };
 
-  const refundProductPoints = (productId: string) => {
-    const product = memberProducts.find(p => p.id === productId);
-    if (!product) return;
-
-    let usedPoints = product.usedPoints || 0;
-
-    if (usedPoints === 0) {
-      const matchingHistory = memberPointHistory.find(
-        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
-      );
-      if (matchingHistory) {
-        usedPoints = Math.abs(matchingHistory.amount);
-      }
-    }
-
-    if (usedPoints > 0) {
-      // 해당 상품의 결제 사용 이력 삭제
-      setMemberPointHistory(prev => 
-        prev.filter(h => !(h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')))
-      );
-      // 포인트 반환
-      setMemberPoints(prev => prev + usedPoints);
-    }
-  };
-
   const handleOpenRefundModal = (productId: string) => {
     const product = memberProducts.find(p => p.id === productId);
     if (!product) return;
@@ -722,19 +699,13 @@ const MemberDetail = () => {
       }
     }
 
-    // 사용 포인트 전액 반환 및 이력 기록
-    if (usedPoints > 0) {
-      // 기존 결제 사용 이력 삭제
-      setMemberPointHistory(prev =>
-        prev.filter(h => !(h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')))
-      );
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
+    if (usedPoints > 0) {
       const newBalance = memberPoints + usedPoints;
       setMemberPoints(newBalance);
-      
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      
+
       setMemberPointHistory(prev => [{
         id: `ph${Date.now()}`,
         type: 'earn' as const,
@@ -764,20 +735,12 @@ const MemberDetail = () => {
       }
     }
 
-    // 기존 결제 사용 이력 삭제
-    if (usedPoints > 0) {
-      setMemberPointHistory(prev =>
-        prev.filter(h => !(h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')))
-      );
-    }
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    // 전액 포인트 반환 및 이력 기록
     if (usedPoints > 0) {
       const newBalance = memberPoints + usedPoints;
       setMemberPoints(newBalance);
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       setMemberPointHistory(prev => [{
         id: `ph${Date.now()}`,
@@ -1303,9 +1266,7 @@ const MemberDetail = () => {
                 <span className="current-point-value">{member.point.toLocaleString()}P</span>
               </div>
               <div className="point-history-list">
-                {[...member.pointHistory]
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .map(history => (
+                {member.pointHistory.map(history => (
                     <div key={history.id} className="point-history-item">
                       <div className="history-left">
                         <span className={`history-type ${history.type}`}>
@@ -1353,11 +1314,8 @@ const MemberDetail = () => {
           return sum + price;
         }, 0);
 
-        const checkedProducts = allRefundProducts.filter(p => refundChecked[p.id]);
-        const totalCheckedAmount = checkedProducts.reduce((sum, p) => {
-          const price = p.salePrice !== undefined ? p.salePrice : (productPriceMap[p.name] || 0);
-          return sum + price;
-        }, 0);
+        const _checkedProducts = allRefundProducts.filter(p => refundChecked[p.id]);
+        void _checkedProducts;
 
         return (
           <div className="modal-overlay" onClick={() => setShowRefundModal(false)}>
