@@ -56,7 +56,6 @@ const menuItems: MenuItem[] = [
     label: '포인트', 
     icon: <Coins size={20} />,
     children: [
-      { id: 'batch-grant', label: '포인트 지급', path: '/point/batch-grant' },
       { id: 'auto-settings', label: '자동 지급', path: '/point/auto-settings' },
       { id: 'dashboard', label: '포인트 사용/충전', path: '/point/dashboard' },
       { id: 'policy', label: '설정', path: '/point/policy' },

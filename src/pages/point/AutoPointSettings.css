@@ -455,3 +455,27 @@
   }
 }
 
+.form-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+.random-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.random-range-inputs .input-with-suffix {
+  flex: 1;
+}
+
+.range-separator {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  flex-shrink: 0;
+}
+

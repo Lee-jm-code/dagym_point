@@ -43,6 +43,7 @@
   border-radius: 50%;
   background: #e5e7eb;
   flex-shrink: 0;
+  object-fit: cover;
 }
 
 .member-basic-info {
@@ -1362,4 +1363,412 @@
 .btn-refund-confirm:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* 포인트 이력 팝업 내 포인트 지급 */
+.popup-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-grant-toggle {
+  padding: 9px 21px;
+  border: 1px solid #6366f1;
+  background: white;
+  color: #6366f1;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.inline-grant-toggle:hover {
+  background: #6366f1;
+  color: white;
+}
+
+.inline-grant-form {
+  background: #f8f7ff;
+  border: 1px solid #e0ddf5;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inline-grant-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inline-grant-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.inline-grant-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.inline-grant-input-wrapper:focus-within {
+  border-color: #6366f1;
+}
+
+.inline-grant-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  color: #333;
+}
+
+.inline-grant-input::-webkit-inner-spin-button,
+.inline-grant-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inline-grant-suffix {
+  padding: 8px 12px 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.inline-grant-reason {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  outline: none;
+}
+
+.inline-grant-reason:focus {
+  border-color: #6366f1;
+}
+
+.inline-grant-btn {
+  align-self: flex-end;
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.inline-grant-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.inline-grant-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 출석 달력 */
+.attendance-calendar {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 12px 0;
+  background: #fff;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.calendar-nav button {
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-nav button:hover {
+  background: #f3f4f6;
+}
+
+.calendar-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.calendar-grid {
+  width: 100%;
+}
+
+.calendar-header-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+
+.calendar-header-cell {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  padding: 6px 0;
+}
+
+.calendar-week-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-day-cell {
+  text-align: center;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.calendar-day-cell:hover {
+  background: #f3f4f6;
+}
+
+.calendar-day-cell.other-month {
+  color: #d1d5db;
+  cursor: default;
+}
+
+.calendar-day-cell.other-month:hover {
+  background: transparent;
+}
+
+.calendar-day-cell.today {
+  font-weight: 700;
+  color: #6366f1;
+  border: 1px solid #6366f1;
+}
+
+.calendar-day-cell.selected {
+  background: #6366f1;
+  color: #fff;
+  font-weight: 600;
+}
+
+.calendar-day-cell.selected:hover {
+  background: #4f46e5;
+}
+
+.calendar-day-cell.attended {
+  position: relative;
+}
+
+.calendar-day-cell.attended::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.calendar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.btn-calendar-cancel {
+  padding: 8px 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-calendar-cancel:hover {
+  background: #f3f4f6;
+}
+
+.btn-calendar-add {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #d1d5db;
+  color: #fff;
+  font-size: 14px;
+  cursor: not-allowed;
+}
+
+.btn-calendar-add.active {
+  background: #6366f1;
+  cursor: pointer;
+}
+
+.btn-calendar-add.active:hover {
+  background: #4f46e5;
+}
+
+/* 출석 헤더 액션 */
+.attendance-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-toggle-group {
+  display: flex;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  background: #fff;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.15s;
+}
+
+.view-toggle-btn + .view-toggle-btn {
+  border-left: 1px solid #d1d5db;
+}
+
+.view-toggle-btn.active {
+  background: #6366f1;
+  color: #fff;
+}
+
+.view-toggle-btn:hover:not(.active) {
+  background: #f3f4f6;
+}
+
+/* 리스트 뷰 */
+.attendance-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.attendance-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.attendance-list-item:last-child {
+  border-bottom: none;
+}
+
+.attendance-list-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6366f1;
+  flex-shrink: 0;
+}
+
+.attendance-list-date {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.attendance-list-time {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.attendance-remove-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.attendance-remove-btn:hover {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+/* 달력 뷰 */
+.attendance-calendar-view {
+  padding: 4px 0;
+}
+
+.attendance-calendar-view .calendar-nav {
+  margin-bottom: 8px;
+}
+
+.attendance-calendar-view .calendar-day-cell {
+  cursor: default;
+}
+
+.attendance-calendar-view .calendar-day-cell:hover {
+  background: transparent;
+}
+
+.attendance-calendar-view .calendar-day-cell.attended {
+  background: #eef2ff;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+/* 출석 추가 달력 구분 */
+.add-calendar {
+  margin-bottom: 12px;
+  border: 2px solid #6366f1;
 }

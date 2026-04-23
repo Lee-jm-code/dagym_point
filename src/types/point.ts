@@ -3,7 +3,10 @@ export type PointEventType =
   | 'NEW_REGISTRATION'      // 신규 등록
   | 'RE_REGISTRATION'       // 재등록
   | 'ATTENDANCE'            // 출석
-  | 'PROMOTION';            // 프로모션
+  | 'PROMOTION'             // 프로모션
+  | 'BIRTHDAY'              // 생일
+  | 'CONSECUTIVE_ATTENDANCE' // x일 연속 출석
+  | 'ANNIVERSARY';          // 회원가입 x주년
 
 // 포인트 사유
 export type PointReason = 
@@ -25,10 +28,15 @@ export interface AutoPointEvent {
   description: string;
   isActive: boolean;
   pointAmount: number;
+  pointType?: 'fixed' | 'percentage' | 'random';
+  percentageRate?: number;
+  randomMin?: number;
+  randomMax?: number;
   allowDuplicate: boolean;
   duplicateCondition?: string;
   startDate?: string;
   endDate?: string;
+  customNumber?: number;
 }
 
 // 포인트 트랜잭션 (적립/사용 내역)

@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ArrowLeft, X } from 'lucide-react';
+import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ChevronLeft, ArrowLeft, X, List, CalendarDays } from 'lucide-react';
 import './MemberDetail.css';
 
 interface PointHistory {
@@ -280,6 +280,9 @@ const MemberDetail = () => {
   const [activeProductTab, setActiveProductTab] = useState<'active' | 'past'>('active');
   const [showProductModal, setShowProductModal] = useState(false);
   const [showPointHistory, setShowPointHistory] = useState(false);
+  const [showInlineGrant, setShowInlineGrant] = useState(false);
+  const [inlineGrantAmount, setInlineGrantAmount] = useState<number>(1000);
+  const [inlineGrantReason, setInlineGrantReason] = useState('');
   const [productMenuOpen, setProductMenuOpen] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showRefundModal, setShowRefundModal] = useState(false);
@@ -289,6 +292,13 @@ const MemberDetail = () => {
   const [refundAmount, setRefundAmount] = useState(0);
   const [refundReason, setRefundReason] = useState('');
   const [refundChecked, setRefundChecked] = useState<Record<string, boolean>>({});
+  const [showAttendanceCalendar, setShowAttendanceCalendar] = useState(false);
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<string | null>(null);
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [attendanceViewMode, setAttendanceViewMode] = useState<'list' | 'calendar'>('list');
+  const [viewCalendarYear, setViewCalendarYear] = useState(new Date().getFullYear());
+  const [viewCalendarMonth, setViewCalendarMonth] = useState(new Date().getMonth());
   
   // 상품 배정 폼 상태
   const [productForm, setProductForm] = useState({
@@ -344,18 +354,39 @@ const MemberDetail = () => {
     }
     return initialMember.pointHistory;
   };
+
+  const loadStoredAttendance = (): { date: string; time: string }[] => {
+    const stored = localStorage.getItem(`member_${memberId}_attendance`);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return initialMember.attendanceRecords;
+      }
+    }
+    return initialMember.attendanceRecords;
+  };
   
   const [memberProducts, setMemberProducts] = useState<Product[]>(loadStoredProducts);
   const [memberPoints, setMemberPoints] = useState<number>(loadStoredPoints);
   const [memberPointHistory, setMemberPointHistory] = useState<PointHistory[]>(loadStoredPointHistory);
+  const [memberAttendance, setMemberAttendance] = useState<{ date: string; time: string }[]>(loadStoredAttendance);
   
   // memberId 변경 시 데이터 다시 로드
   useEffect(() => {
     setMemberProducts(loadStoredProducts());
     setMemberPoints(loadStoredPoints());
     setMemberPointHistory(loadStoredPointHistory());
+    setMemberAttendance(loadStoredAttendance());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberId]);
+
+  // 기존 상품이 있는 회원은 hadProduct 마킹
+  useEffect(() => {
+    if (memberProducts.length > 0 || (initialMember.products && initialMember.products.length > 0)) {
+      localStorage.setItem(`member_${memberId}_hadProduct`, 'true');
+    }
+  }, [memberId, memberProducts.length, initialMember.products]);
 
   // 포인트 음수 보정 및 잘못된 이력 정리
   useEffect(() => {
@@ -401,8 +432,12 @@ const MemberDetail = () => {
   useEffect(() => {
     localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify(memberPointHistory));
   }, [memberPointHistory, memberId]);
+
+  useEffect(() => {
+    localStorage.setItem(`member_${memberId}_attendance`, JSON.stringify(memberAttendance));
+  }, [memberAttendance, memberId]);
   
-  const member = { ...initialMember, products: memberProducts, point: memberPoints, pointHistory: memberPointHistory };
+  const member = { ...initialMember, products: memberProducts, point: memberPoints, pointHistory: memberPointHistory, attendanceRecords: memberAttendance };
 
   const productPriceMap: Record<string, number> = {
     '헬스 1개월': 100000,
@@ -485,9 +520,99 @@ const MemberDetail = () => {
   };
 
   const handlePointsChange = (value: number) => {
-    // 보유 포인트보다 크면 보유 포인트로 제한
     const validValue = Math.min(Math.max(0, value), memberPoints);
     setProductForm(prev => ({ ...prev, usePoints: validValue }));
+  };
+
+  const handleAddAttendance = () => {
+    if (!selectedAttendanceDate) return;
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const newRecord = { date: selectedAttendanceDate, time: timeStr };
+
+    setMemberAttendance(prev => [newRecord, ...prev]);
+
+    const autoEnabled = localStorage.getItem('auto_point_enabled');
+    if (autoEnabled !== 'false') {
+      const storedSettings = localStorage.getItem('auto_point_settings');
+      if (storedSettings) {
+        try {
+          const autoEvents = JSON.parse(storedSettings);
+          const attendanceEvent = autoEvents.find(
+            (e: { eventType: string; isActive: boolean }) => e.eventType === 'ATTENDANCE' && e.isActive
+          );
+
+          if (attendanceEvent) {
+            let grantAmount = 0;
+            let reason = '';
+
+            if (attendanceEvent.pointType === 'random' && attendanceEvent.randomMin != null && attendanceEvent.randomMax != null) {
+              const min = attendanceEvent.randomMin;
+              const max = attendanceEvent.randomMax;
+              grantAmount = Math.floor(Math.random() * (max - min + 1)) + min;
+              reason = `출석 포인트 (랜덤 ${min.toLocaleString()}~${max.toLocaleString()}P)`;
+            } else {
+              grantAmount = attendanceEvent.pointAmount || 0;
+              reason = '출석 포인트 지급';
+            }
+
+            if (grantAmount > 0) {
+              const newBalance = memberPoints + grantAmount;
+              setMemberPoints(newBalance);
+              setMemberPointHistory(prev => [{
+                id: `ph_att_${Date.now()}`,
+                type: 'earn',
+                amount: grantAmount,
+                balance: newBalance,
+                reason,
+                createdAt: `${selectedAttendanceDate} ${timeStr}`,
+              }, ...prev]);
+            }
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    setSelectedAttendanceDate(null);
+    setShowAttendanceCalendar(false);
+  };
+
+  const getCalendarDays = (year: number, month: number) => {
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    const days: { day: number; currentMonth: boolean }[] = [];
+
+    for (let i = firstDay - 1; i >= 0; i--) {
+      days.push({ day: prevMonthDays - i, currentMonth: false });
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ day: i, currentMonth: true });
+    }
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) {
+      days.push({ day: i, currentMonth: false });
+    }
+    return days;
+  };
+
+  const formatDateStr = (year: number, month: number, day: number) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  const isAttendanceDate = (dateStr: string) => {
+    return memberAttendance.some(r => r.date === dateStr);
+  };
+
+  const getDayOfWeek = (dateStr: string) => {
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const d = new Date(dateStr);
+    return days[d.getDay()];
+  };
+
+  const handleRemoveAttendance = (idx: number) => {
+    setMemberAttendance(prev => prev.filter((_, i) => i !== idx));
   };
 
   const handleAssignProduct = () => {
@@ -527,26 +652,81 @@ const MemberDetail = () => {
     
     // 상품 목록에 추가
     setMemberProducts(prev => [...prev, newProduct]);
+
+    const now = new Date();
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    let currentBalance = memberPoints;
+    const newHistoryEntries: PointHistory[] = [];
     
     // 포인트 사용 시 차감 및 이력 추가
     if (productForm.usePoints > 0) {
-      const newBalance = Math.max(0, memberPoints - productForm.usePoints);
-      setMemberPoints(newBalance);
+      currentBalance = Math.max(0, currentBalance - productForm.usePoints);
       
-      // 포인트 이력 추가
-      const now = new Date();
-      const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      
-      const newPointHistory: PointHistory = {
+      newHistoryEntries.push({
         id: `ph${Date.now()}`,
         type: 'use',
         amount: -productForm.usePoints,
-        balance: newBalance,
+        balance: currentBalance,
         reason: `${productForm.product} 결제 사용`,
         createdAt: dateTimeStr,
-      };
-      
-      setMemberPointHistory(prev => [newPointHistory, ...prev]);
+      });
+    }
+
+    // 자동 지급 설정 확인 (신규등록/재등록)
+    const autoEnabled = localStorage.getItem('auto_point_enabled');
+    if (autoEnabled !== 'false') {
+      const storedSettings = localStorage.getItem('auto_point_settings');
+      if (storedSettings) {
+        try {
+          const autoEvents = JSON.parse(storedSettings);
+          const hadFirstProduct = localStorage.getItem(`member_${memberId}_hadProduct`) === 'true';
+          const eventType = hadFirstProduct ? 'RE_REGISTRATION' : 'NEW_REGISTRATION';
+          const matchingEvent = autoEvents.find(
+            (e: { eventType: string; isActive: boolean }) => e.eventType === eventType && e.isActive
+          );
+
+          if (matchingEvent) {
+            let grantAmount = 0;
+            let reason = '';
+
+            if (matchingEvent.pointType === 'random' && matchingEvent.randomMin != null && matchingEvent.randomMax != null) {
+              const min = matchingEvent.randomMin;
+              const max = matchingEvent.randomMax;
+              grantAmount = Math.floor(Math.random() * (max - min + 1)) + min;
+              reason = hadFirstProduct
+                ? `재등록 포인트 (랜덤 ${min.toLocaleString()}~${max.toLocaleString()}P)`
+                : `신규 등록 포인트 (랜덤 ${min.toLocaleString()}~${max.toLocaleString()}P)`;
+            } else if (matchingEvent.pointType === 'percentage' && matchingEvent.percentageRate > 0) {
+              grantAmount = Math.floor(actualReceivedAmount * matchingEvent.percentageRate / 100);
+              reason = hadFirstProduct
+                ? `재등록 포인트 (받은 금액의 ${matchingEvent.percentageRate}%)`
+                : `신규 등록 포인트 (받은 금액의 ${matchingEvent.percentageRate}%)`;
+            } else {
+              grantAmount = matchingEvent.pointAmount || 0;
+              reason = hadFirstProduct ? '재등록 포인트 지급' : '신규 등록 포인트 지급';
+            }
+
+            if (grantAmount > 0) {
+              currentBalance = currentBalance + grantAmount;
+              newHistoryEntries.push({
+                id: `ph${Date.now() + 1}`,
+                type: 'earn',
+                amount: grantAmount,
+                balance: currentBalance,
+                reason,
+                createdAt: dateTimeStr,
+              });
+            }
+          }
+        } catch { /* ignore parse errors */ }
+      }
+      localStorage.setItem(`member_${memberId}_hadProduct`, 'true');
+    }
+
+    // 포인트 및 이력 반영
+    if (newHistoryEntries.length > 0) {
+      setMemberPoints(currentBalance);
+      setMemberPointHistory(prev => [...newHistoryEntries.reverse(), ...prev]);
     }
     
     setShowProductModal(false);
@@ -667,6 +847,28 @@ const MemberDetail = () => {
     });
   };
 
+  const handleInlinePointGrant = () => {
+    if (!inlineGrantAmount || inlineGrantAmount <= 0 || !inlineGrantReason) return;
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const newBalance = memberPoints + inlineGrantAmount;
+
+    setMemberPoints(newBalance);
+    setMemberPointHistory(prev => [{
+      id: `ph${Date.now()}`,
+      type: 'earn' as const,
+      amount: inlineGrantAmount,
+      balance: newBalance,
+      reason: inlineGrantReason,
+      createdAt: dateStr,
+    }, ...prev]);
+
+    setShowInlineGrant(false);
+    setInlineGrantAmount(1000);
+    setInlineGrantReason('');
+  };
+
   const handleOpenRefundModal = (productId: string) => {
     const product = memberProducts.find(p => p.id === productId);
     if (!product) return;
@@ -681,6 +883,32 @@ const MemberDetail = () => {
     setRefundChecked({ [productId]: true });
     setShowRefundModal(true);
     setProductMenuOpen(null);
+  };
+
+  const findAutoGrantForProduct = (product: Product) => {
+    const productDate = product.startDate?.replace(/\./g, '-');
+    return memberPointHistory.find(
+      h => h.type === 'earn'
+        && (h.reason.includes('신규 등록 포인트') || h.reason.includes('재등록 포인트'))
+        && productDate && h.createdAt.startsWith(productDate)
+    );
+  };
+
+  const reclaimAutoGrantPoints = (product: Product, currentBalance: number, dateStr: string, reasonPrefix: string) => {
+    const autoGrant = findAutoGrantForProduct(product);
+    if (!autoGrant) return { balance: currentBalance, entries: [] as PointHistory[] };
+
+    const reclaimAmount = autoGrant.amount;
+    const newBalance = Math.max(0, currentBalance - reclaimAmount);
+    const entry: PointHistory = {
+      id: `ph${Date.now() + 2}`,
+      type: 'use',
+      amount: -reclaimAmount,
+      balance: newBalance,
+      reason: `${reasonPrefix} 자동 지급 포인트 회수`,
+      createdAt: dateStr,
+    };
+    return { balance: newBalance, entries: [entry] };
   };
 
   const handleConfirmRefund = () => {
@@ -701,19 +929,28 @@ const MemberDetail = () => {
 
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let currentBalance = memberPoints;
+    const newEntries: PointHistory[] = [];
 
     if (usedPoints > 0) {
-      const newBalance = memberPoints + usedPoints;
-      setMemberPoints(newBalance);
-
-      setMemberPointHistory(prev => [{
+      currentBalance = currentBalance + usedPoints;
+      newEntries.push({
         id: `ph${Date.now()}`,
         type: 'earn' as const,
         amount: usedPoints,
-        balance: newBalance,
+        balance: currentBalance,
         reason: '회원권 환불',
         createdAt: dateStr,
-      }, ...prev]);
+      });
+    }
+
+    const reclaim = reclaimAutoGrantPoints(product, currentBalance, dateStr, '회원권 환불');
+    currentBalance = reclaim.balance;
+    newEntries.push(...reclaim.entries);
+
+    setMemberPoints(currentBalance);
+    if (newEntries.length > 0) {
+      setMemberPointHistory(prev => [...newEntries.reverse(), ...prev]);
     }
 
     setMemberProducts(prev => prev.filter(p => p.id !== refundProductId));
@@ -737,19 +974,28 @@ const MemberDetail = () => {
 
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let currentBalance = memberPoints;
+    const newEntries: PointHistory[] = [];
 
     if (usedPoints > 0) {
-      const newBalance = memberPoints + usedPoints;
-      setMemberPoints(newBalance);
-
-      setMemberPointHistory(prev => [{
+      currentBalance = currentBalance + usedPoints;
+      newEntries.push({
         id: `ph${Date.now()}`,
         type: 'earn' as const,
         amount: usedPoints,
-        balance: newBalance,
+        balance: currentBalance,
         reason: `${product.name} 결제취소 포인트 반환`,
         createdAt: dateStr,
-      }, ...prev]);
+      });
+    }
+
+    const reclaim = reclaimAutoGrantPoints(product, currentBalance, dateStr, `${product.name} 결제취소`);
+    currentBalance = reclaim.balance;
+    newEntries.push(...reclaim.entries);
+
+    setMemberPoints(currentBalance);
+    if (newEntries.length > 0) {
+      setMemberPointHistory(prev => [...newEntries.reverse(), ...prev]);
     }
 
     setMemberProducts(prev => prev.filter(p => p.id !== productId));
@@ -795,7 +1041,11 @@ const MemberDetail = () => {
       {/* 상단 회원 정보 */}
       <div className="member-header-card">
         <div className="member-header-left">
-          <div className="member-avatar-large" />
+          {memberId === '2' ? (
+            <img src="/test-profile.png" alt="" className="member-avatar-large" />
+          ) : (
+            <div className="member-avatar-large" />
+          )}
           <div className="member-basic-info">
             <div className="member-name-row">
               <h1 className="member-name">{member.name}</h1>
@@ -931,18 +1181,136 @@ const MemberDetail = () => {
               <span className="period-label">최근 30일</span>
               <ChevronRight size={16} />
             </h3>
-            <button className="add-btn"><Plus size={20} /></button>
+            <div className="attendance-header-actions">
+              <div className="view-toggle-group">
+                <button
+                  className={`view-toggle-btn${attendanceViewMode === 'list' ? ' active' : ''}`}
+                  onClick={() => setAttendanceViewMode('list')}
+                >
+                  <List size={16} />
+                </button>
+                <button
+                  className={`view-toggle-btn${attendanceViewMode === 'calendar' ? ' active' : ''}`}
+                  onClick={() => setAttendanceViewMode('calendar')}
+                >
+                  <CalendarDays size={16} />
+                </button>
+              </div>
+              <button className="add-btn" onClick={() => {
+                setShowAttendanceCalendar(!showAttendanceCalendar);
+                setSelectedAttendanceDate(null);
+              }}><Plus size={20} /></button>
+            </div>
           </div>
-          <div className="attendance-content">
-            {member.attendanceRecords.length > 0 ? (
-              member.attendanceRecords.map((record, idx) => (
-                <div key={idx} className="attendance-item">
-                  <span>{record.date}</span>
-                  <span>{record.time}</span>
+
+          {showAttendanceCalendar && (
+            <div className="attendance-calendar add-calendar">
+              <div className="calendar-nav">
+                <button onClick={() => {
+                  if (calendarMonth === 0) { setCalendarMonth(11); setCalendarYear(y => y - 1); }
+                  else setCalendarMonth(m => m - 1);
+                }}><ChevronLeft size={16} /></button>
+                <span className="calendar-title">{calendarYear}년 {calendarMonth + 1}월</span>
+                <button onClick={() => {
+                  if (calendarMonth === 11) { setCalendarMonth(0); setCalendarYear(y => y + 1); }
+                  else setCalendarMonth(m => m + 1);
+                }}><ChevronRight size={16} /></button>
+              </div>
+              <div className="calendar-grid">
+                <div className="calendar-header-row">
+                  {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+                    <div key={d} className="calendar-header-cell">{d}</div>
+                  ))}
                 </div>
-              ))
+                {Array.from({ length: 6 }, (_, weekIdx) => (
+                  <div key={weekIdx} className="calendar-week-row">
+                    {getCalendarDays(calendarYear, calendarMonth).slice(weekIdx * 7, weekIdx * 7 + 7).map((cell, cellIdx) => {
+                      const dateStr = cell.currentMonth ? formatDateStr(calendarYear, calendarMonth, cell.day) : '';
+                      const isSelected = selectedAttendanceDate === dateStr;
+                      const isToday = dateStr === new Date().toISOString().split('T')[0];
+                      const hasAttendance = cell.currentMonth && isAttendanceDate(dateStr);
+                      return (
+                        <div
+                          key={cellIdx}
+                          className={`calendar-day-cell${!cell.currentMonth ? ' other-month' : ''}${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}${hasAttendance ? ' attended' : ''}`}
+                          onClick={() => cell.currentMonth && setSelectedAttendanceDate(dateStr)}
+                        >
+                          {cell.day}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="calendar-actions">
+                <button className="btn-calendar-cancel" onClick={() => { setShowAttendanceCalendar(false); setSelectedAttendanceDate(null); }}>취소</button>
+                <button
+                  className={`btn-calendar-add${selectedAttendanceDate ? ' active' : ''}`}
+                  disabled={!selectedAttendanceDate}
+                  onClick={handleAddAttendance}
+                >출석 추가</button>
+              </div>
+            </div>
+          )}
+
+          <div className="attendance-content">
+            {attendanceViewMode === 'list' ? (
+              member.attendanceRecords.length > 0 ? (
+                <div className="attendance-list-view">
+                  {member.attendanceRecords.map((record, idx) => (
+                    <div key={idx} className="attendance-list-item">
+                      <div className="attendance-list-dot" />
+                      <span className="attendance-list-date">
+                        {record.date.replace(/-/g, '.')} ({getDayOfWeek(record.date)})
+                      </span>
+                      <span className="attendance-list-time">{record.time}</span>
+                      <button className="attendance-remove-btn" onClick={() => handleRemoveAttendance(idx)}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state">출석 기록이 없어요.</div>
+              )
             ) : (
-              <div className="empty-state">출석 기록이 없어요.</div>
+              <div className="attendance-calendar-view">
+                <div className="calendar-nav">
+                  <button onClick={() => {
+                    if (viewCalendarMonth === 0) { setViewCalendarMonth(11); setViewCalendarYear(y => y - 1); }
+                    else setViewCalendarMonth(m => m - 1);
+                  }}><ChevronLeft size={16} /></button>
+                  <span className="calendar-title">{viewCalendarYear}년 {String(viewCalendarMonth + 1).padStart(2, '0')}월</span>
+                  <button onClick={() => {
+                    if (viewCalendarMonth === 11) { setViewCalendarMonth(0); setViewCalendarYear(y => y + 1); }
+                    else setViewCalendarMonth(m => m + 1);
+                  }}><ChevronRight size={16} /></button>
+                </div>
+                <div className="calendar-grid">
+                  <div className="calendar-header-row">
+                    {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+                      <div key={d} className="calendar-header-cell">{d}</div>
+                    ))}
+                  </div>
+                  {Array.from({ length: 6 }, (_, weekIdx) => (
+                    <div key={weekIdx} className="calendar-week-row">
+                      {getCalendarDays(viewCalendarYear, viewCalendarMonth).slice(weekIdx * 7, weekIdx * 7 + 7).map((cell, cellIdx) => {
+                        const dateStr = cell.currentMonth ? formatDateStr(viewCalendarYear, viewCalendarMonth, cell.day) : '';
+                        const isToday = dateStr === new Date().toISOString().split('T')[0];
+                        const hasAttendance = cell.currentMonth && isAttendanceDate(dateStr);
+                        return (
+                          <div
+                            key={cellIdx}
+                            className={`calendar-day-cell${!cell.currentMonth ? ' other-month' : ''}${isToday ? ' today' : ''}${hasAttendance ? ' attended' : ''}`}
+                          >
+                            {cell.day}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -1256,15 +1624,57 @@ const MemberDetail = () => {
           <div className="point-history-popup" onClick={e => e.stopPropagation()}>
             <div className="popup-header">
               <h3 className="popup-title">포인트 이력</h3>
-              <button className="popup-close" onClick={() => setShowPointHistory(false)}>
-                <X size={20} />
-              </button>
+              <div className="popup-header-actions">
+                <button
+                  className="inline-grant-toggle"
+                  onClick={() => setShowInlineGrant(!showInlineGrant)}
+                >
+                  {showInlineGrant ? '취소' : '포인트 지급'}
+                </button>
+                <button className="popup-close" onClick={() => setShowPointHistory(false)}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             <div className="popup-content">
               <div className="current-point-info">
                 <span className="current-point-label">현재 보유 포인트</span>
                 <span className="current-point-value">{member.point.toLocaleString()}P</span>
               </div>
+              {showInlineGrant && (
+                <div className="inline-grant-form">
+                  <div className="inline-grant-row">
+                    <label className="inline-grant-label">지급 포인트</label>
+                    <div className="inline-grant-input-wrapper">
+                      <input
+                        type="number"
+                        className="inline-grant-input"
+                        value={inlineGrantAmount}
+                        onChange={e => setInlineGrantAmount(parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                      <span className="inline-grant-suffix">P</span>
+                    </div>
+                  </div>
+                  <div className="inline-grant-row">
+                    <label className="inline-grant-label">지급 사유</label>
+                    <input
+                      type="text"
+                      className="inline-grant-reason"
+                      value={inlineGrantReason}
+                      onChange={e => setInlineGrantReason(e.target.value)}
+                      placeholder="예: 이벤트 포인트 지급"
+                    />
+                  </div>
+                  <button
+                    className="inline-grant-btn"
+                    onClick={handleInlinePointGrant}
+                    disabled={!inlineGrantAmount || inlineGrantAmount <= 0 || !inlineGrantReason}
+                  >
+                    지급하기
+                  </button>
+                </div>
+              )}
               <div className="point-history-list">
                 {member.pointHistory.map(history => (
                     <div key={history.id} className="point-history-item">

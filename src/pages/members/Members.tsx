@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, X, Download } from 'lucide-react';
+import { Search, ChevronDown, X, Download, Send, CheckCircle } from 'lucide-react';
 import './Members.css';
 
 interface Member {
@@ -54,6 +54,12 @@ const Members = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [mockMembers, setMockMembers] = useState<Member[]>(baseMockMembers);
+  const [showMemberActionMenu, setShowMemberActionMenu] = useState(false);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+  const [showPointGrantModal, setShowPointGrantModal] = useState(false);
+  const [pointAmount, setPointAmount] = useState<number>(1000);
+  const [pointReason, setPointReason] = useState('');
+  const [isGranted, setIsGranted] = useState(false);
 
   const loadMembersFromStorage = useCallback(() => {
     const updated = baseMockMembers.map(member => {
@@ -116,6 +122,18 @@ const Members = () => {
     loadMembersFromStorage();
   }, [loadMembersFromStorage]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setShowMemberActionMenu(false);
+      }
+    };
+    if (showMemberActionMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMemberActionMenu]);
+
   const handleMemberClick = (member: Member) => {
     navigate(`/members/${member.id}`);
   };
@@ -142,6 +160,59 @@ const Members = () => {
       setSelectedMembers(selectedMembers.filter(m => m !== id));
     }
   };
+
+  const handlePointGrant = () => {
+    if (selectedMembers.length === 0) {
+      alert('포인트를 지급할 회원을 선택해주세요.');
+      return;
+    }
+    if (!pointAmount || pointAmount <= 0) {
+      alert('지급할 포인트를 입력해주세요.');
+      return;
+    }
+    if (!pointReason) {
+      alert('지급 사유를 입력해주세요.');
+      return;
+    }
+
+    const now = new Date();
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    const memberDefaultPoints: Record<string, number> = {
+      '1': 0, '2': 5000, '3': 1500, '4': 3000, '5': 10000,
+    };
+
+    selectedMembers.forEach(memberId => {
+      const storedPoints = localStorage.getItem(`member_${memberId}_points`);
+      const currentPoints = storedPoints ? JSON.parse(storedPoints) : (memberDefaultPoints[memberId] || 0);
+      const newPoints = currentPoints + pointAmount;
+      localStorage.setItem(`member_${memberId}_points`, JSON.stringify(newPoints));
+
+      const storedHistory = localStorage.getItem(`member_${memberId}_pointHistory`);
+      const currentHistory = storedHistory ? JSON.parse(storedHistory) : [];
+      const newHistoryEntry = {
+        id: `ph${Date.now()}_${memberId}`,
+        type: 'earn',
+        amount: pointAmount,
+        balance: newPoints,
+        reason: pointReason,
+        createdAt: dateTimeStr,
+      };
+      localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify([newHistoryEntry, ...currentHistory]));
+    });
+
+    setIsGranted(true);
+    setShowPointGrantModal(false);
+    setShowMemberActionMenu(false);
+    setTimeout(() => {
+      setIsGranted(false);
+      setSelectedMembers([]);
+      setPointReason('');
+    }, 3000);
+    loadMembersFromStorage();
+  };
+
+  const totalPoints = pointAmount * selectedMembers.length;
 
   const totalPages = Math.ceil(mockMembers.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
@@ -208,9 +279,28 @@ const Members = () => {
             ))}
           </div>
           <div className="filter-right">
-            <button className="action-btn outline" disabled>
-              선택한 회원들(에게)
-            </button>
+            <div className="member-action-wrapper" ref={actionMenuRef}>
+              <button
+                className={`action-btn outline ${selectedMembers.length > 0 ? 'enabled' : ''}`}
+                onClick={() => selectedMembers.length > 0 && setShowMemberActionMenu(!showMemberActionMenu)}
+                disabled={selectedMembers.length === 0}
+              >
+                선택한 회원들(에게)
+                <ChevronDown size={14} />
+              </button>
+              {showMemberActionMenu && (
+                <div className="member-action-dropdown">
+                  <button className="dropdown-item" onClick={() => setShowMemberActionMenu(false)}>기간 연장</button>
+                  <button className="dropdown-item" onClick={() => setShowMemberActionMenu(false)}>폴딩 적용</button>
+                  <button className="dropdown-item" onClick={() => setShowMemberActionMenu(false)}>메시지 보내기</button>
+                  <button className="dropdown-item point-grant" onClick={() => { setShowPointGrantModal(true); setShowMemberActionMenu(false); }}>포인트 지급</button>
+                  <button className="dropdown-item disabled-item">회원권 양도(남겨주기)</button>
+                  <button className="dropdown-item disabled-item">회원권 양수(넘겨받기)</button>
+                  <button className="dropdown-item" onClick={() => setShowMemberActionMenu(false)}>회원 병합하기</button>
+                  <button className="dropdown-item delete-item" onClick={() => setShowMemberActionMenu(false)}>삭제하기</button>
+                </div>
+              )}
+            </div>
             <button className="action-btn outline">
               <Download size={14} />
               엑셀 다운로드
@@ -284,7 +374,11 @@ const Members = () => {
                   />
                 </td>
                 <td className="member-info-cell">
-                  <div className="member-avatar" />
+                  {member.id === '2' ? (
+                    <img src="/test-profile.png" alt="" className="member-avatar" />
+                  ) : (
+                    <div className="member-avatar" />
+                  )}
                   <div className="member-details">
                     <span className="member-name">{member.name}</span>
                     <span className="member-phone">{member.phone}</span>
@@ -362,6 +456,69 @@ const Members = () => {
         </div>
       </div>
 
+      {/* 포인트 지급 모달 */}
+      {showPointGrantModal && (
+        <div className="modal-overlay" onClick={() => setShowPointGrantModal(false)}>
+          <div className="point-grant-modal" onClick={e => e.stopPropagation()}>
+            <div className="point-grant-header">
+              <h3 className="point-grant-title">포인트 지급</h3>
+              <button className="point-grant-close" onClick={() => setShowPointGrantModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="point-grant-body">
+              <div className="point-grant-field">
+                <label className="point-grant-label">지급 포인트</label>
+                <div className="point-grant-input-wrapper">
+                  <input
+                    type="number"
+                    className="point-grant-input"
+                    value={pointAmount}
+                    onChange={e => setPointAmount(parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                  />
+                  <span className="point-grant-suffix">P</span>
+                </div>
+              </div>
+              <div className="point-grant-field">
+                <label className="point-grant-label">지급 사유</label>
+                <input
+                  type="text"
+                  className="point-grant-reason"
+                  value={pointReason}
+                  onChange={e => setPointReason(e.target.value)}
+                  placeholder="예: 신년 이벤트 포인트 지급"
+                />
+              </div>
+            </div>
+            <div className="point-grant-footer">
+              <div className="point-grant-summary">
+                <span>선택: <strong>{selectedMembers.length}명</strong></span>
+                <span>총 지급: <strong className="total-points">{totalPoints.toLocaleString()}P</strong></span>
+              </div>
+              <button
+                className="point-grant-btn"
+                onClick={handlePointGrant}
+                disabled={!pointAmount || !pointReason}
+              >
+                <Send size={18} />
+                지급하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 성공 토스트 */}
+      {isGranted && (
+        <div className="toast success">
+          <CheckCircle size={20} />
+          <span>{selectedMembers.length}명에게 {pointAmount.toLocaleString()}P가 지급되었습니다.</span>
+          <button className="toast-close" onClick={() => setIsGranted(false)}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

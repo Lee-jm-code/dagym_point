@@ -3,7 +3,6 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import PointDashboard from './pages/point/PointDashboard';
 import AutoPointSettings from './pages/point/AutoPointSettings';
-import BatchPointGrant from './pages/point/BatchPointGrant';
 import PointPolicy from './pages/point/PointPolicy';
 import Members from './pages/members/Members';
 import MemberDetail from './pages/members/MemberDetail';
@@ -31,7 +30,6 @@ function App() {
             <Route index element={<Navigate to="/point/dashboard" replace />} />
             <Route path="dashboard" element={<PointDashboard />} />
             <Route path="auto-settings" element={<AutoPointSettings />} />
-            <Route path="batch-grant" element={<BatchPointGrant />} />
             <Route path="policy" element={<PointPolicy />} />
           </Route>
           

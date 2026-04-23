@@ -310,6 +310,8 @@
   height: 36px;
   border-radius: 50%;
   background: #e5e7eb;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .member-details {
@@ -318,13 +320,13 @@
   gap: 2px;
 }
 
-.member-name {
-  font-size: 9px;
-  font-weight: 500;
+.members-page .member-name {
+  font-size: 13px !important;
+  font-weight: 600 !important;
   color: #1a1a2e;
 }
 
-.member-phone {
+.members-page .member-phone {
   font-size: 12px;
   color: #999;
 }
@@ -703,4 +705,267 @@
 .btn-grant-point:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* 선택한 회원들(에게) 드롭다운 */
+.member-action-wrapper {
+  position: relative;
+}
+
+.action-btn.outline.enabled {
+  opacity: 1;
+  cursor: pointer;
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.member-action-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  z-index: 100;
+  padding: 6px 0;
+  animation: dropdownFadeIn 0.15s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.member-action-dropdown .dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.member-action-dropdown .dropdown-item:hover {
+  background: #f5f3ff;
+}
+
+.member-action-dropdown .dropdown-item.point-grant {
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.member-action-dropdown .dropdown-item.disabled-item {
+  color: #bbb;
+  cursor: default;
+}
+
+.member-action-dropdown .dropdown-item.disabled-item:hover {
+  background: none;
+}
+
+.member-action-dropdown .dropdown-item.delete-item {
+  color: #ef4444;
+}
+
+/* 포인트 지급 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.point-grant-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.point-grant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.point-grant-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.point-grant-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.point-grant-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.point-grant-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.point-grant-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.point-grant-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.point-grant-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.point-grant-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  color: #333;
+}
+
+.point-grant-input::-webkit-inner-spin-button,
+.point-grant-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.point-grant-suffix {
+  padding: 10px 14px 10px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6366f1;
+}
+
+.point-grant-reason {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  outline: none;
+}
+
+.point-grant-reason:focus,
+.point-grant-input-wrapper:focus-within {
+  border-color: #6366f1;
+}
+
+.point-grant-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafbfc;
+}
+
+.point-grant-summary {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #666;
+}
+
+.point-grant-summary .total-points {
+  color: #6366f1;
+}
+
+.point-grant-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.point-grant-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.point-grant-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 성공 토스트 */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 2000;
+  animation: toastSlideUp 0.3s ease;
+}
+
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.toast.success {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 2px;
 }
