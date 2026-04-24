@@ -17,13 +17,13 @@ interface TargetMember {
 }
 
 const mockMembers: TargetMember[] = [
-  { id: '1', name: '상단확인용', phone: '010-****-5829', gender: '남', birthDate: '-', status: '미입력', membership: '-', expiryDate: '-', remainingDays: '-', remainingCount: '-', currentPoints: 0 },
-  { id: '2', name: 'test', phone: '010-****-7749', gender: '남', birthDate: '-', status: '유효', membership: '(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.15', remainingDays: '29일', remainingCount: '-', currentPoints: 5000 },
-  { id: '3', name: '제갈민주', phone: '010-****-9409', gender: '남', birthDate: '-', status: '유효', membership: '테스트100테스트 1회', expiryDate: '-', remainingDays: '-', remainingCount: '1회', currentPoints: 1500 },
-  { id: '4', name: 'ㅅㄷㄴㅅ', phone: '010-****-7749', gender: '남', birthDate: '-', status: '유효', membership: '(((((기간제)))) 헬스 1개월', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '-', currentPoints: 3000 },
-  { id: '5', name: 'leejm', phone: '010-****-4191', gender: '남', birthDate: '-', status: '유효', membership: 'TEST1111123 1회', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '1회', currentPoints: 10000 },
-  { id: '6', name: '김철수', phone: '010-****-1234', gender: '남', birthDate: '1990.05.15', status: '유효', membership: '6개월 회원권', expiryDate: '2026.06.15', remainingDays: '150일', remainingCount: '-', currentPoints: 3500 },
-  { id: '7', name: '이영희', phone: '010-****-2345', gender: '여', birthDate: '1995.08.20', status: '만료', membership: '3개월 회원권', expiryDate: '2025.12.20', remainingDays: '-', remainingCount: '-', currentPoints: 2000 },
+  { id: '1', name: '상단확인용', phone: '010-1111-1111', gender: '남', birthDate: '-', status: '미입력', membership: '-', expiryDate: '-', remainingDays: '-', remainingCount: '-', currentPoints: 0 },
+  { id: '2', name: 'test', phone: '010-2222-2222', gender: '남', birthDate: '-', status: '유효', membership: '(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.15', remainingDays: '29일', remainingCount: '-', currentPoints: 5000 },
+  { id: '3', name: '제갈민주', phone: '010-3333-3333', gender: '남', birthDate: '-', status: '유효', membership: '테스트100테스트 1회', expiryDate: '-', remainingDays: '-', remainingCount: '1회', currentPoints: 1500 },
+  { id: '4', name: 'ㅅㄷㄴㅅ', phone: '010-4444-4444', gender: '남', birthDate: '-', status: '유효', membership: '(((((기간제)))) 헬스 1개월', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '-', currentPoints: 3000 },
+  { id: '5', name: 'leejm', phone: '010-5555-5555', gender: '남', birthDate: '-', status: '유효', membership: 'TEST1111123 1회', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '1회', currentPoints: 10000 },
+  { id: '6', name: '김철수', phone: '010-6666-6666', gender: '남', birthDate: '1990.05.15', status: '유효', membership: '6개월 회원권', expiryDate: '2026.06.15', remainingDays: '150일', remainingCount: '-', currentPoints: 3500 },
+  { id: '7', name: '이영희', phone: '010-7777-7777', gender: '여', birthDate: '1995.08.20', status: '만료', membership: '3개월 회원권', expiryDate: '2025.12.20', remainingDays: '-', remainingCount: '-', currentPoints: 2000 },
 ];
 
 const filterOptions = [

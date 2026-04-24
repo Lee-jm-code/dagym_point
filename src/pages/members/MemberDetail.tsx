@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ChevronLeft, ArrowLeft, X, List, CalendarDays } from 'lucide-react';
+import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ChevronLeft, ArrowLeft, X, List, CalendarDays, ChevronDown } from 'lucide-react';
 import './MemberDetail.css';
 
 interface PointHistory {
@@ -66,7 +66,7 @@ const mockMemberData: Record<string, MemberInfo> = {
   '1': {
     id: '1',
     name: '상단확인용',
-    phone: '010-6745-5829',
+    phone: '010-1111-1111',
     gender: '남',
     birthDate: '-',
     address: '-',
@@ -96,7 +96,7 @@ const mockMemberData: Record<string, MemberInfo> = {
   '2': {
     id: '2',
     name: 'test',
-    phone: '010-6745-7749',
+    phone: '010-2222-2222',
     gender: '남',
     birthDate: '-',
     address: '-',
@@ -151,7 +151,7 @@ const mockMemberData: Record<string, MemberInfo> = {
   '3': {
     id: '3',
     name: '제갈민주',
-    phone: '010-6745-9409',
+    phone: '010-3333-3333',
     gender: '남',
     birthDate: '-',
     address: '-',
@@ -189,7 +189,7 @@ const mockMemberData: Record<string, MemberInfo> = {
   '4': {
     id: '4',
     name: 'ㅅㄷㄴㅅ',
-    phone: '010-6745-7749',
+    phone: '010-4444-4444',
     gender: '남',
     birthDate: '-',
     address: '-',
@@ -227,7 +227,7 @@ const mockMemberData: Record<string, MemberInfo> = {
   '5': {
     id: '5',
     name: 'leejm',
-    phone: '010-6745-4191',
+    phone: '010-5555-5555',
     gender: '남',
     birthDate: '-',
     address: '-',
@@ -274,6 +274,57 @@ const mockMemberData: Record<string, MemberInfo> = {
   },
 };
 
+type PaymentLinkTab = 'sold' | 'all' | 'favorites' | 'membership' | 'rental' | 'other';
+
+const FAVORITE_PAYMENT_PRODUCTS: string[] = [
+  '헬스 1개월',
+  '헬스 3개월',
+  '헬스 6개월',
+  '헬스 12개월',
+  'PT 10회',
+  'PT 20회',
+  '운동복 대여',
+  '락커 이용권',
+];
+
+const PAYMENT_LINK_TABS: { id: PaymentLinkTab; label: string }[] = [
+  { id: 'sold', label: '판매한 상품' },
+  { id: 'all', label: '전체보기' },
+  { id: 'favorites', label: '즐겨찾기' },
+  { id: 'membership', label: '회원권' },
+  { id: 'rental', label: '대여' },
+  { id: 'other', label: '기타' },
+];
+
+interface PaymentLinkCartItem {
+  id: string;
+  name: string;
+  productPrice: number;
+  grossSaleAmount: number;
+  usedPoints: number;
+  saleAmount: number;
+  exerciseStart: string;
+  exerciseEnd: string;
+}
+
+const formatPaymentLinkDateLabel = (iso: string) => {
+  if (!iso) return '-';
+  const d = new Date(iso + 'T12:00:00');
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}.${m}.${day} (${days[d.getDay()]})`;
+};
+
+/** 쉼표·공백 등 제거 후 정수 파싱 (결제링크 금액/포인트 입력용) */
+const parseFormattedInt = (value: string): number => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (!digits) return 0;
+  const n = parseInt(digits, 10);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const MemberDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -299,6 +350,18 @@ const MemberDetail = () => {
   const [attendanceViewMode, setAttendanceViewMode] = useState<'list' | 'calendar'>('list');
   const [viewCalendarYear, setViewCalendarYear] = useState(new Date().getFullYear());
   const [viewCalendarMonth, setViewCalendarMonth] = useState(new Date().getMonth());
+  const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
+  const [paymentLinkTab, setPaymentLinkTab] = useState<PaymentLinkTab>('favorites');
+  const [paymentLinkDraftProduct, setPaymentLinkDraftProduct] = useState<string | null>(null);
+  const [paymentLinkCartItems, setPaymentLinkCartItems] = useState<PaymentLinkCartItem[]>([]);
+  const [paymentLinkSalesManager, setPaymentLinkSalesManager] = useState('');
+  const [paymentLinkProductPrice, setPaymentLinkProductPrice] = useState(0);
+  const [paymentLinkSaleAmountInput, setPaymentLinkSaleAmountInput] = useState('');
+  const [paymentLinkUsage, setPaymentLinkUsage] = useState('이용 방법');
+  const [paymentLinkExerciseStart, setPaymentLinkExerciseStart] = useState('');
+  const [paymentLinkExerciseEnd, setPaymentLinkExerciseEnd] = useState('');
+  const [paymentLinkSessionLabel, setPaymentLinkSessionLabel] = useState('');
+  const [paymentLinkUsePointsInput, setPaymentLinkUsePointsInput] = useState('');
   
   // 상품 배정 폼 상태
   const [productForm, setProductForm] = useState({
@@ -451,6 +514,154 @@ const MemberDetail = () => {
   };
 
   const productOptions = Object.keys(productPriceMap);
+
+  const getPaymentLinkPills = (): string[] => {
+    switch (paymentLinkTab) {
+      case 'favorites':
+        return [...FAVORITE_PAYMENT_PRODUCTS];
+      case 'all':
+        return productOptions;
+      case 'membership':
+        return ['헬스 1개월', '헬스 3개월', '헬스 6개월', '헬스 12개월', 'PT 10회', 'PT 20회'];
+      case 'rental':
+        return ['운동복 대여', '락커 이용권'];
+      case 'sold': {
+        const names = memberProducts.filter(p => p.isActive).map(p => p.name);
+        return [...new Set(names)];
+      }
+      case 'other':
+      default:
+        return [];
+    }
+  };
+
+  const getDefaultExerciseRangeForPaymentLink = (name: string): { start: string; end: string } => {
+    const today = new Date();
+    const start = today.toISOString().split('T')[0];
+    const endDate = new Date(today);
+    if (name === '헬스 1개월') endDate.setMonth(endDate.getMonth() + 1);
+    else if (name === '헬스 3개월') endDate.setMonth(endDate.getMonth() + 3);
+    else if (name === '헬스 6개월') endDate.setMonth(endDate.getMonth() + 6);
+    else if (name === '헬스 12개월') endDate.setMonth(endDate.getMonth() + 12);
+    else if (name === 'PT 10회') endDate.setMonth(endDate.getMonth() + 1);
+    else if (name === 'PT 20회') endDate.setMonth(endDate.getMonth() + 2);
+    else endDate.setMonth(endDate.getMonth() + 1);
+    return { start, end: endDate.toISOString().split('T')[0] };
+  };
+
+  const getSessionLabelForPaymentLink = (name: string): string => {
+    if (name === 'PT 10회') return '10회 (1개월)';
+    if (name === 'PT 20회') return '20회 (2개월)';
+    if (name.startsWith('헬스')) {
+      const m = name.replace('헬스 ', '').replace('개월', '');
+      return `${m}개월`;
+    }
+    return '';
+  };
+
+  const openPaymentLinkModal = () => {
+    setShowPaymentLinkModal(true);
+    setPaymentLinkTab('favorites');
+    setPaymentLinkDraftProduct(null);
+    setPaymentLinkCartItems([]);
+    setPaymentLinkSalesManager('');
+    setPaymentLinkProductPrice(0);
+    setPaymentLinkSaleAmountInput('');
+    setPaymentLinkUsage('이용 방법');
+    setPaymentLinkExerciseStart('');
+    setPaymentLinkExerciseEnd('');
+    setPaymentLinkSessionLabel('');
+    setPaymentLinkUsePointsInput('');
+  };
+
+  const getPaymentLinkPointsUsedInCart = () =>
+    paymentLinkCartItems.reduce((s, i) => s + i.usedPoints, 0);
+
+  const selectPaymentLinkDraft = (name: string) => {
+    if (paymentLinkDraftProduct === name) {
+      setPaymentLinkDraftProduct(null);
+      setPaymentLinkProductPrice(0);
+      setPaymentLinkSaleAmountInput('');
+      setPaymentLinkExerciseStart('');
+      setPaymentLinkExerciseEnd('');
+      setPaymentLinkSessionLabel('');
+      setPaymentLinkUsePointsInput('');
+      return;
+    }
+    setPaymentLinkDraftProduct(name);
+    const price = productPriceMap[name] ?? 0;
+    setPaymentLinkProductPrice(price);
+    setPaymentLinkSaleAmountInput(price ? price.toLocaleString() : '0');
+    setPaymentLinkUsePointsInput('');
+    const range = getDefaultExerciseRangeForPaymentLink(name);
+    setPaymentLinkExerciseStart(range.start);
+    setPaymentLinkExerciseEnd(range.end);
+    setPaymentLinkSessionLabel(getSessionLabelForPaymentLink(name));
+  };
+
+  const handleAddPaymentLinkToCart = () => {
+    if (!paymentLinkDraftProduct || !paymentLinkExerciseStart || !paymentLinkExerciseEnd) return;
+    const grossSale = parseFormattedInt(paymentLinkSaleAmountInput);
+    const usedInCart = getPaymentLinkPointsUsedInCart();
+    const availablePoints = Math.max(0, memberPoints - usedInCart);
+    const requestedUse = parseFormattedInt(paymentLinkUsePointsInput);
+    const usedPoints = Math.min(requestedUse, availablePoints, grossSale);
+    const saleAmount = Math.max(0, grossSale - usedPoints);
+    const item: PaymentLinkCartItem = {
+      id: `pl_${Date.now()}`,
+      name: paymentLinkDraftProduct,
+      productPrice: paymentLinkProductPrice,
+      grossSaleAmount: grossSale,
+      usedPoints,
+      saleAmount,
+      exerciseStart: paymentLinkExerciseStart,
+      exerciseEnd: paymentLinkExerciseEnd,
+    };
+    setPaymentLinkCartItems(prev => [...prev, item]);
+    setPaymentLinkDraftProduct(null);
+    setPaymentLinkSalesManager('');
+    setPaymentLinkProductPrice(0);
+    setPaymentLinkSaleAmountInput('');
+    setPaymentLinkExerciseStart('');
+    setPaymentLinkExerciseEnd('');
+    setPaymentLinkSessionLabel('');
+    setPaymentLinkUsePointsInput('');
+  };
+
+  const handleConfirmPaymentLinkSend = () => {
+    if (paymentLinkCartItems.length === 0) return;
+    const totalUse = paymentLinkCartItems.reduce((s, i) => s + i.usedPoints, 0);
+    if (totalUse > 0) {
+      const newBalance = Math.max(0, memberPoints - totalUse);
+      const now = new Date();
+      const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      setMemberPoints(newBalance);
+      setMemberPointHistory(prev => [{
+        id: `ph_pl_${Date.now()}`,
+        type: 'use',
+        amount: -totalUse,
+        balance: newBalance,
+        reason: '상품 결제링크 전송 포인트 사용',
+        createdAt: dateTimeStr,
+      }, ...prev]);
+    }
+    setShowPaymentLinkModal(false);
+    setPaymentLinkCartItems([]);
+    setPaymentLinkDraftProduct(null);
+    setPaymentLinkUsePointsInput('');
+  };
+
+  const removePaymentLinkCartItem = (id: string) => {
+    setPaymentLinkCartItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const applyPaymentLinkUseAllPoints = () => {
+    const gross = parseFormattedInt(paymentLinkSaleAmountInput);
+    const usedInCart = paymentLinkCartItems.reduce((s, i) => s + i.usedPoints, 0);
+    const available = Math.max(0, memberPoints - usedInCart);
+    const maxUse = Math.min(available, gross);
+    setPaymentLinkUsePointsInput(maxUse ? maxUse.toLocaleString() : '');
+  };
 
   const handleProductFormChange = (field: string, value: string | number) => {
     setProductForm(prev => {
@@ -1030,6 +1241,12 @@ const MemberDetail = () => {
     }
   };
 
+  const plUsedInCartPts = paymentLinkCartItems.reduce((s, i) => s + i.usedPoints, 0);
+  const plDraftGross = parseFormattedInt(paymentLinkSaleAmountInput);
+  const plAvailablePts = Math.max(0, memberPoints - plUsedInCartPts);
+  const plDraftUsePts = Math.min(parseFormattedInt(paymentLinkUsePointsInput), plAvailablePts, plDraftGross);
+  const plDraftNet = Math.max(0, plDraftGross - plDraftUsePts);
+
   return (
     <div className="member-detail-page">
       {/* 뒤로가기 버튼 */}
@@ -1056,7 +1273,7 @@ const MemberDetail = () => {
               <button className="action-btn-outline">계약서 관리</button>
               <button className="action-btn-outline">출입 관리</button>
             </div>
-            <button className="payment-link-btn">결제링크 전송</button>
+            <button type="button" className="payment-link-btn" onClick={openPaymentLinkModal}>결제링크 전송</button>
             <div className="promo-banner">
               <span>최대 7개월 무이자 할부 혜택!</span>
               <button className="promo-close">×</button>
@@ -1866,6 +2083,298 @@ const MemberDetail = () => {
               </div>
             </div>
           </div>
+        );
+      })()}
+
+      {showPaymentLinkModal && (() => {
+        const paymentLinkTotal = paymentLinkCartItems.reduce((s, i) => s + i.saleAmount, 0);
+        return (
+        <div className="modal-overlay payment-link-overlay" onClick={() => setShowPaymentLinkModal(false)}>
+          <div className="payment-link-modal" onClick={e => e.stopPropagation()}>
+            <div className="payment-link-modal-top">
+              <div className="payment-link-title-row">
+                <h2 className="payment-link-modal-title">상품 결제링크 보내기</h2>
+                <div className="payment-link-title-actions">
+                  <button type="button" className="payment-link-installment-link header">이번달 무이자 할부 보기</button>
+                  <button type="button" className="payment-link-close" onClick={() => setShowPaymentLinkModal(false)} aria-label="닫기">
+                    <X size={22} />
+                  </button>
+                </div>
+              </div>
+              <p className="payment-link-modal-sub">{member.name}님에게 상품 결제링크를 전송합니다.</p>
+              <div className="payment-link-tab-bar">
+                {PAYMENT_LINK_TABS.map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`payment-link-tab${paymentLinkTab === tab.id ? ' active' : ''}`}
+                    onClick={() => {
+                      setPaymentLinkTab(tab.id);
+                      setPaymentLinkDraftProduct(null);
+                      setPaymentLinkProductPrice(0);
+                      setPaymentLinkSaleAmountInput('');
+                      setPaymentLinkExerciseStart('');
+                      setPaymentLinkExerciseEnd('');
+                      setPaymentLinkSessionLabel('');
+                      setPaymentLinkUsePointsInput('');
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="payment-link-modal-body">
+              <div className="payment-link-col-left">
+                <div className="payment-link-pills-wrap">
+                  {getPaymentLinkPills().length > 0 ? (
+                    <div className="payment-link-pills">
+                      {getPaymentLinkPills().map(name => (
+                        <button
+                          key={name}
+                          type="button"
+                          className={`payment-link-pill${paymentLinkDraftProduct === name ? ' selected' : ''}`}
+                          onClick={() => selectPaymentLinkDraft(name)}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="payment-link-pills-empty">표시할 상품이 없습니다.</div>
+                  )}
+                </div>
+
+                {paymentLinkDraftProduct && (
+                  <div className="payment-link-draft-section">
+                    {paymentLinkDraftProduct.startsWith('PT') && (
+                      <div className="payment-link-form-group">
+                        <label className="payment-link-label">회원권 횟수 선택</label>
+                        <div className="payment-link-select-wrap">
+                          <select
+                            className="payment-link-select"
+                            value={paymentLinkSessionLabel}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setPaymentLinkSessionLabel(v);
+                              const start = paymentLinkExerciseStart || new Date().toISOString().split('T')[0];
+                              const endDate = new Date(start + 'T12:00:00');
+                              if (paymentLinkDraftProduct === 'PT 10회') {
+                                endDate.setMonth(endDate.getMonth() + (v.includes('2개월') ? 2 : 1));
+                              } else {
+                                endDate.setMonth(endDate.getMonth() + (v.includes('3개월') ? 3 : 2));
+                              }
+                              setPaymentLinkExerciseEnd(endDate.toISOString().split('T')[0]);
+                            }}
+                          >
+                            {paymentLinkDraftProduct === 'PT 10회' ? (
+                              <>
+                                <option value="10회 (1개월)">10회 (1개월)</option>
+                                <option value="10회 (2개월)">10회 (2개월)</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="20회 (2개월)">20회 (2개월)</option>
+                                <option value="20회 (3개월)">20회 (3개월)</option>
+                              </>
+                            )}
+                          </select>
+                          <ChevronDown size={18} className="payment-link-select-icon" aria-hidden />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="payment-link-form-group">
+                      <label className="payment-link-label">결제와 세일즈 담당자(선택)</label>
+                      <div className="payment-link-select-wrap">
+                        <select
+                          className="payment-link-select"
+                          value={paymentLinkSalesManager}
+                          onChange={e => setPaymentLinkSalesManager(e.target.value)}
+                        >
+                          <option value="">선택해 주세요</option>
+                          <option value="담당자1">담당자1</option>
+                          <option value="담당자2">담당자2</option>
+                          <option value="대표">대표</option>
+                        </select>
+                        <ChevronDown size={18} className="payment-link-select-icon" aria-hidden />
+                      </div>
+                    </div>
+
+                    <div className="payment-link-form-group">
+                      <label className="payment-link-label">운동 기간</label>
+                      <div className="payment-link-date-row">
+                        <input
+                          type="date"
+                          className="payment-link-date-input"
+                          value={paymentLinkExerciseStart}
+                          onChange={e => setPaymentLinkExerciseStart(e.target.value)}
+                        />
+                        <span className="payment-link-date-sep">~</span>
+                        <input
+                          type="date"
+                          className="payment-link-date-input"
+                          value={paymentLinkExerciseEnd}
+                          onChange={e => setPaymentLinkExerciseEnd(e.target.value)}
+                        />
+                      </div>
+                      <p className="payment-link-date-hint">
+                        {formatPaymentLinkDateLabel(paymentLinkExerciseStart)} ~ {formatPaymentLinkDateLabel(paymentLinkExerciseEnd)}
+                      </p>
+                    </div>
+
+                    <div className="payment-link-notice">
+                      <p>다짐 결제링크로 전송 시에는 다른 결제수단을 추가할 수 없어요!</p>
+                    </div>
+
+                    <div className="payment-link-form-group">
+                      <div className="payment-link-select-wrap">
+                        <select
+                          className="payment-link-select"
+                          value={paymentLinkUsage}
+                          onChange={e => setPaymentLinkUsage(e.target.value)}
+                        >
+                          <option value="이용 방법">다짐 결제링크 · 이용 방법</option>
+                          <option value="안내">결제 안내</option>
+                        </select>
+                        <ChevronDown size={18} className="payment-link-select-icon" aria-hidden />
+                      </div>
+                    </div>
+
+                    <div className="payment-link-price-row">
+                      <div className="payment-link-form-group half">
+                        <label className="payment-link-label">상품 가격</label>
+                        <div className="payment-link-readonly-input">
+                          {paymentLinkProductPrice.toLocaleString()} 원
+                        </div>
+                      </div>
+                      <div className="payment-link-form-group half">
+                        <label className="payment-link-label">판매금액</label>
+                        <div className="payment-link-amount-wrap">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            className="payment-link-amount-input"
+                            value={paymentLinkSaleAmountInput}
+                            onChange={e => {
+                              const newGross = parseFormattedInt(e.target.value);
+                              setPaymentLinkSaleAmountInput(newGross ? newGross.toLocaleString() : '');
+                              const usedInCart = paymentLinkCartItems.reduce((s, i) => s + i.usedPoints, 0);
+                              const available = Math.max(0, memberPoints - usedInCart);
+                              const maxUse = Math.min(available, newGross);
+                              const curUse = parseFormattedInt(paymentLinkUsePointsInput);
+                              const clamped = Math.min(curUse, maxUse);
+                              setPaymentLinkUsePointsInput(clamped ? clamped.toLocaleString() : '');
+                            }}
+                            placeholder="0"
+                          />
+                          <span className="payment-link-amount-suffix">원</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="payment-link-points-block">
+                      <div className="payment-link-form-group payment-link-point-usage-wrap">
+                        <div className="point-usage-header">
+                          <label className="payment-link-label">포인트 사용</label>
+                          <span className="available-points">
+                            사용 가능: <strong>{plAvailablePts.toLocaleString()}P</strong>
+                          </span>
+                        </div>
+                        <div className="point-usage-input-row">
+                          <div className="price-input-wrapper point-input-wrapper payment-link-point-input-wrap">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className="price-input"
+                              value={paymentLinkUsePointsInput}
+                              onChange={e => {
+                                const num = parseFormattedInt(e.target.value);
+                                const gross = parseFormattedInt(paymentLinkSaleAmountInput);
+                                const usedInCart = paymentLinkCartItems.reduce((s, i) => s + i.usedPoints, 0);
+                                const available = Math.max(0, memberPoints - usedInCart);
+                                const clamped = Math.min(num, available, gross);
+                                setPaymentLinkUsePointsInput(clamped ? clamped.toLocaleString() : '');
+                              }}
+                              placeholder="0"
+                            />
+                            <span className="price-suffix">P</span>
+                          </div>
+                          <button type="button" className="use-all-points-btn" onClick={applyPaymentLinkUseAllPoints}>
+                            전액 사용
+                          </button>
+                        </div>
+                        <p className="payment-link-points-hint">
+                          보유 {memberPoints.toLocaleString()}P 중, 이미 장바구니에 담은 상품의 사용 포인트를 제외한 금액까지 사용할 수 있으며, 판매금액을 초과할 수 없습니다.
+                        </p>
+                      </div>
+                      <div className="payment-link-net-row">
+                        <span>포인트 반영 결제 금액</span>
+                        <strong>{plDraftNet.toLocaleString()}원</strong>
+                      </div>
+                    </div>
+
+                    <div className="payment-link-select-row">
+                      <button type="button" className="payment-link-add-btn" onClick={handleAddPaymentLinkToCart}>
+                        선택하기 &gt;
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="payment-link-col-right">
+                <h3 className="payment-link-selected-title">선택한 상품</h3>
+                <div className="payment-link-selected-scroll">
+                  {paymentLinkCartItems.length === 0 ? (
+                    <div className="payment-link-selected-empty">
+                      회원에게 배정할 상품을 선택해 주세요.
+                    </div>
+                  ) : (
+                    <div className="payment-link-cart-list">
+                      {paymentLinkCartItems.map(item => (
+                        <div key={item.id} className="payment-link-cart-card">
+                          <button
+                            type="button"
+                            className="payment-link-cart-remove"
+                            onClick={() => removePaymentLinkCartItem(item.id)}
+                            aria-label="삭제"
+                          >
+                            <X size={16} />
+                          </button>
+                          <div className="payment-link-cart-name">{item.name}</div>
+                          <div className="payment-link-cart-price">{item.saleAmount.toLocaleString()}원</div>
+                          {item.usedPoints > 0 && (
+                            <div className="payment-link-cart-points">
+                              판매금액 {item.grossSaleAmount.toLocaleString()}원 · 포인트 {item.usedPoints.toLocaleString()}P 사용
+                            </div>
+                          )}
+                          <div className="payment-link-cart-period">
+                            {formatPaymentLinkDateLabel(item.exerciseStart)} ~ {formatPaymentLinkDateLabel(item.exerciseEnd)}
+                          </div>
+                          <span className="payment-link-cart-badge">다짐 결제링크</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="payment-link-modal-footer">
+              <button type="button" className="payment-link-btn-cancel" onClick={() => setShowPaymentLinkModal(false)}>취소</button>
+              <button
+                type="button"
+                className="payment-link-btn-send"
+                disabled={paymentLinkCartItems.length === 0}
+                onClick={handleConfirmPaymentLinkSend}
+              >
+                {paymentLinkTotal.toLocaleString()}원 결제링크 보내기
+              </button>
+            </div>
+          </div>
+        </div>
         );
       })()}
     </div>

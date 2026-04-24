@@ -28,12 +28,25 @@ interface StoredProduct {
   isActive: boolean;
 }
 
+/** 회원 목록에서만 사용: 가운데 4자리 마스킹 (예: 010-1111-1111 → 010-XXXX-1111) */
+function maskPhoneForMemberList(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 11) {
+    return `${digits.slice(0, 3)}-XXXX-${digits.slice(7)}`;
+  }
+  const m = phone.match(/^(\d{2,3})-(\d{3,4})-(\d{4})$/);
+  if (m) {
+    return `${m[1]}-XXXX-${m[3]}`;
+  }
+  return phone;
+}
+
 const baseMockMembers: Member[] = [
-  { id: '1', name: '상단확인용', phone: '010-****-5829', gender: '남', birthDate: '-', status: '미입력', lastAttendance: '-', membership: '-', expiryDate: '-', remainingDays: '-', remainingCount: '-', lockerNumber: '-' },
-  { id: '2', name: 'test', phone: '010-****-7749', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.15', remainingDays: '29일', remainingCount: '-', lockerNumber: '-' },
-  { id: '3', name: '제갈민주', phone: '010-****-9409', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '테스트100테스트 1회', expiryDate: '-', remainingDays: '-', remainingCount: '1회', lockerNumber: '-' },
-  { id: '4', name: 'ㅅㄷㄴㅅ', phone: '010-****-7749', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '(((((기간제)))) 헬스 1개월', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '-', lockerNumber: '-' },
-  { id: '5', name: 'leejm', phone: '010-****-4191', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: 'TEST1111123 1회\n(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '1회', lockerNumber: '-' },
+  { id: '1', name: '상단확인용', phone: '010-1111-1111', gender: '남', birthDate: '-', status: '미입력', lastAttendance: '-', membership: '-', expiryDate: '-', remainingDays: '-', remainingCount: '-', lockerNumber: '-' },
+  { id: '2', name: 'test', phone: '010-2222-2222', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.15', remainingDays: '29일', remainingCount: '-', lockerNumber: '-' },
+  { id: '3', name: '제갈민주', phone: '010-3333-3333', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '테스트100테스트 1회', expiryDate: '-', remainingDays: '-', remainingCount: '1회', lockerNumber: '-' },
+  { id: '4', name: 'ㅅㄷㄴㅅ', phone: '010-4444-4444', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: '(((((기간제)))) 헬스 1개월', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '-', lockerNumber: '-' },
+  { id: '5', name: 'leejm', phone: '010-5555-5555', gender: '남', birthDate: '-', status: '유효', lastAttendance: '-', membership: 'TEST1111123 1회\n(((((횟수제)))) 헬스 1개월', expiryDate: '2026.02.06', remainingDays: '20일', remainingCount: '1회', lockerNumber: '-' },
 ];
 
 const filterOptions = [
@@ -381,7 +394,7 @@ const Members = () => {
                   )}
                   <div className="member-details">
                     <span className="member-name">{member.name}</span>
-                    <span className="member-phone">{member.phone}</span>
+                    <span className="member-phone">{maskPhoneForMemberList(member.phone)}</span>
                   </div>
                 </td>
                 <td>{member.gender}</td>
