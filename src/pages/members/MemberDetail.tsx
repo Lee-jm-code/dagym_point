@@ -334,6 +334,9 @@ const MemberDetail = () => {
   const [showInlineGrant, setShowInlineGrant] = useState(false);
   const [inlineGrantAmount, setInlineGrantAmount] = useState<number>(1000);
   const [inlineGrantReason, setInlineGrantReason] = useState('');
+  const [showInlineReclaim, setShowInlineReclaim] = useState(false);
+  const [inlineReclaimAmountInput, setInlineReclaimAmountInput] = useState('');
+  const [inlineReclaimReason, setInlineReclaimReason] = useState('');
   const [productMenuOpen, setProductMenuOpen] = useState<string | null>(null);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [showRefundModal, setShowRefundModal] = useState(false);
@@ -1059,7 +1062,8 @@ const MemberDetail = () => {
   };
 
   const handleInlinePointGrant = () => {
-    if (!inlineGrantAmount || inlineGrantAmount <= 0 || !inlineGrantReason) return;
+    const grantReason = inlineGrantReason.trim();
+    if (!inlineGrantAmount || inlineGrantAmount <= 0 || !grantReason) return;
 
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1071,13 +1075,49 @@ const MemberDetail = () => {
       type: 'earn' as const,
       amount: inlineGrantAmount,
       balance: newBalance,
-      reason: inlineGrantReason,
+      reason: grantReason,
       createdAt: dateStr,
     }, ...prev]);
 
     setShowInlineGrant(false);
     setInlineGrantAmount(1000);
     setInlineGrantReason('');
+  };
+
+  const closePointHistoryPopup = () => {
+    setShowPointHistory(false);
+    setShowInlineGrant(false);
+    setShowInlineReclaim(false);
+    setInlineGrantAmount(1000);
+    setInlineGrantReason('');
+    setInlineReclaimAmountInput('');
+    setInlineReclaimReason('');
+  };
+
+  const handleInlinePointReclaim = () => {
+    const amt = parseFormattedInt(inlineReclaimAmountInput);
+    const reason = inlineReclaimReason.trim();
+    if (!amt || amt <= 0 || !reason) return;
+    const useAmt = Math.min(amt, memberPoints);
+    if (useAmt <= 0) return;
+
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const newBalance = Math.max(0, memberPoints - useAmt);
+
+    setMemberPoints(newBalance);
+    setMemberPointHistory(prev => [{
+      id: `ph${Date.now()}`,
+      type: 'use' as const,
+      amount: -useAmt,
+      balance: newBalance,
+      reason: `포인트 회수 · ${reason}`,
+      createdAt: dateStr,
+    }, ...prev]);
+
+    setShowInlineReclaim(false);
+    setInlineReclaimAmountInput('');
+    setInlineReclaimReason('');
   };
 
   const handleOpenRefundModal = (productId: string) => {
@@ -1138,19 +1178,27 @@ const MemberDetail = () => {
       }
     }
 
+    const refundCash = Math.max(0, Math.floor(Number(refundAmount)) || 0);
+    /** 1원=1P 기준: 환불금액이 사용 포인트보다 작으면 그 금액만 포인트 환급, 크거나 같으면 사용 포인트 전액 환급 */
+    const pointsToReturn =
+      usedPoints > 0 ? Math.min(usedPoints, refundCash) : 0;
+
     const now = new Date();
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     let currentBalance = memberPoints;
     const newEntries: PointHistory[] = [];
 
-    if (usedPoints > 0) {
-      currentBalance = currentBalance + usedPoints;
+    if (pointsToReturn > 0) {
+      currentBalance = currentBalance + pointsToReturn;
       newEntries.push({
         id: `ph${Date.now()}`,
         type: 'earn' as const,
-        amount: usedPoints,
+        amount: pointsToReturn,
         balance: currentBalance,
-        reason: '회원권 환불',
+        reason:
+          pointsToReturn < usedPoints
+            ? `회원권 환불 (포인트 부분 환급 ${pointsToReturn.toLocaleString()}P)`
+            : '회원권 환불',
         createdAt: dateStr,
       });
     }
@@ -1837,18 +1885,32 @@ const MemberDetail = () => {
 
       {/* 포인트 이력 팝업 */}
       {showPointHistory && (
-        <div className="point-history-overlay" onClick={() => setShowPointHistory(false)}>
+        <div className="point-history-overlay" onClick={closePointHistoryPopup}>
           <div className="point-history-popup" onClick={e => e.stopPropagation()}>
             <div className="popup-header">
               <h3 className="popup-title">포인트 이력</h3>
               <div className="popup-header-actions">
                 <button
+                  type="button"
                   className="inline-grant-toggle"
-                  onClick={() => setShowInlineGrant(!showInlineGrant)}
+                  onClick={() => {
+                    setShowInlineGrant(v => !v);
+                    setShowInlineReclaim(false);
+                  }}
                 >
                   {showInlineGrant ? '취소' : '포인트 지급'}
                 </button>
-                <button className="popup-close" onClick={() => setShowPointHistory(false)}>
+                <button
+                  type="button"
+                  className="inline-reclaim-toggle"
+                  onClick={() => {
+                    setShowInlineReclaim(v => !v);
+                    setShowInlineGrant(false);
+                  }}
+                >
+                  {showInlineReclaim ? '취소' : '포인트 회수'}
+                </button>
+                <button type="button" className="popup-close" onClick={closePointHistoryPopup}>
                   <X size={20} />
                 </button>
               </div>
@@ -1884,11 +1946,57 @@ const MemberDetail = () => {
                     />
                   </div>
                   <button
+                    type="button"
                     className="inline-grant-btn"
                     onClick={handleInlinePointGrant}
-                    disabled={!inlineGrantAmount || inlineGrantAmount <= 0 || !inlineGrantReason}
+                    disabled={!inlineGrantAmount || inlineGrantAmount <= 0 || !inlineGrantReason.trim()}
                   >
                     지급하기
+                  </button>
+                </div>
+              )}
+              {showInlineReclaim && (
+                <div className="inline-grant-form inline-reclaim-form">
+                  <div className="inline-grant-row">
+                    <label className="inline-grant-label">회수 포인트</label>
+                    <div className="inline-grant-input-wrapper">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="inline-grant-input"
+                        value={inlineReclaimAmountInput}
+                        onChange={e => {
+                          const num = parseFormattedInt(e.target.value);
+                          const clamped = Math.min(num, memberPoints);
+                          setInlineReclaimAmountInput(clamped ? clamped.toLocaleString() : '');
+                        }}
+                        placeholder="0"
+                      />
+                      <span className="inline-grant-suffix reclaim">P</span>
+                    </div>
+                  </div>
+                  <p className="inline-reclaim-cap-hint">최대 {memberPoints.toLocaleString()}P까지 입력할 수 있습니다.</p>
+                  <div className="inline-grant-row">
+                    <label className="inline-grant-label">회수 사유</label>
+                    <input
+                      type="text"
+                      className="inline-grant-reason"
+                      value={inlineReclaimReason}
+                      onChange={e => setInlineReclaimReason(e.target.value)}
+                      placeholder="회수 사유를 입력해 주세요"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-reclaim-btn"
+                    onClick={handleInlinePointReclaim}
+                    disabled={(() => {
+                      const a = parseFormattedInt(inlineReclaimAmountInput);
+                      const r = inlineReclaimReason.trim();
+                      return !(a > 0 && r.length > 0 && a <= memberPoints);
+                    })()}
+                  >
+                    회수하기
                   </button>
                 </div>
               )}
@@ -1929,7 +2037,13 @@ const MemberDetail = () => {
         const productPrice = refundProduct.salePrice !== undefined 
           ? refundProduct.salePrice 
           : (productPriceMap[refundProduct.name] || 0);
-        const usedPoints = refundProduct.usedPoints || 0;
+        let usedPoints = refundProduct.usedPoints || 0;
+        if (usedPoints === 0) {
+          const mh = memberPointHistory.find(
+            h => h.type === 'use' && h.reason.includes(refundProduct.name) && h.reason.includes('결제 사용')
+          );
+          if (mh) usedPoints = Math.abs(mh.amount);
+        }
         const totalPaid = productPrice + usedPoints;
         
         const allRefundProducts = memberProducts.filter(p => 
@@ -1940,6 +2054,10 @@ const MemberDetail = () => {
           const price = p.salePrice !== undefined ? p.salePrice : (productPriceMap[p.name] || 0);
           return sum + price;
         }, 0);
+
+        const refundCashForPoints = Math.max(0, Math.floor(Number(refundAmount)) || 0);
+        const plannedPointReturn =
+          usedPoints > 0 ? Math.min(usedPoints, refundCashForPoints) : 0;
 
         const _checkedProducts = allRefundProducts.filter(p => refundChecked[p.id]);
         void _checkedProducts;
@@ -2064,6 +2182,19 @@ const MemberDetail = () => {
                         <span className="refund-summary-label">사용 포인트</span>
                         <span className="refund-summary-value">{usedPoints.toLocaleString()}P</span>
                       </div>
+                    </div>
+                  )}
+                  {usedPoints > 0 && (
+                    <div className="refund-summary-card">
+                      <div className="refund-summary-row">
+                        <span className="refund-summary-label">포인트 환급 예정</span>
+                        <span className="refund-summary-value">{plannedPointReturn.toLocaleString()}P</span>
+                      </div>
+                      {refundCashForPoints < usedPoints && (
+                        <p className="refund-point-hint">
+                          환불 금액이 사용 포인트보다 적어, 입력한 환불 금액만큼만 포인트가 돌아갑니다.
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className="refund-summary-card highlight">
