@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect } from 'react';
+import type { MembershipRefundMode } from '../../types/point';
 import { Mail, Edit2, Trash2, Plus, MoreHorizontal, ChevronRight, ChevronLeft, ArrowLeft, X, List, CalendarDays, ChevronDown } from 'lucide-react';
 import './MemberDetail.css';
 
@@ -325,6 +326,90 @@ const parseFormattedInt = (value: string): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/** 포인트 이력 UI — 저장 시 매칭용으로 붙인 `[#상품ID]`는 사용자에게 숨김 */
+const displayPointHistoryReason = (reason: string): string =>
+  reason.replace(/\s*\[#p\d+\]/g, '').trim();
+
+/** 포인트 정책 설정(`point_policy`)의 회원권 환불 모드 */
+const getStoredMembershipRefundMode = (): MembershipRefundMode => {
+  try {
+    const raw = localStorage.getItem('point_policy');
+    if (!raw) return 'points_first';
+    const p = JSON.parse(raw) as { membershipRefundMode?: string };
+    return p.membershipRefundMode === 'cash_only' ? 'cash_only' : 'points_first';
+  } catch {
+    return 'points_first';
+  }
+};
+
+/** 환불·결제취소 시 신규·재등록 자동 지급 포인트 회수 여부 (기본 true) */
+const getStoredReclaimAutoGrantOnMembershipCancel = (): boolean => {
+  try {
+    const raw = localStorage.getItem('point_policy');
+    if (!raw) return true;
+    const p = JSON.parse(raw) as { reclaimAutoGrantOnMembershipCancel?: boolean };
+    if (typeof p.reclaimAutoGrantOnMembershipCancel === 'boolean') {
+      return p.reclaimAutoGrantOnMembershipCancel;
+    }
+    return true;
+  } catch {
+    return true;
+  }
+};
+
+const parsePointHistoryTime = (createdAt: string): number => {
+  const s = createdAt.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, mo, d] = s.split('-').map(Number);
+    return new Date(y, mo - 1, d, 12, 0, 0, 0).getTime();
+  }
+  const t = new Date(s).getTime();
+  return Number.isFinite(t) ? t : 0;
+};
+
+/** id에 포함된 숫자(보통 Date.now)로 동일일·동일시각 건의 실제 순서 결정 */
+const sortKeyFromHistoryId = (id: string): bigint => {
+  const matches = id.match(/\d+/g);
+  if (!matches?.length) return 0n;
+  let max = 0n;
+  for (const m of matches) {
+    try {
+      const v = BigInt(m);
+      if (v > max) max = v;
+    } catch {
+      /* skip */
+    }
+  }
+  return max;
+};
+
+/**
+ * 이력의 amount 누적으로 각 건 balance·총 보유 포인트를 맞춤.
+ * (같은 시각 배정에서 사용·자동지급 등으로 UI에 넣은 balance가 엇갈릴 때 보정)
+ * 표시 순서: 최신 거래가 위(내림차순) — 동일일자는 id 내 타임스탬프로 구분
+ */
+const recalculatePointHistoryBalances = (entries: PointHistory[]): { historyDesc: PointHistory[]; total: number } => {
+  if (entries.length === 0) return { historyDesc: [], total: 0 };
+  const sortedAsc = [...entries].sort((a, b) => {
+    const ta = parsePointHistoryTime(a.createdAt);
+    const tb = parsePointHistoryTime(b.createdAt);
+    if (ta !== tb) return ta - tb;
+    const ia = sortKeyFromHistoryId(a.id);
+    const ib = sortKeyFromHistoryId(b.id);
+    if (ia !== ib) return ia < ib ? -1 : ia > ib ? 1 : 0;
+    return a.id.localeCompare(b.id);
+  });
+  let running = 0;
+  const withBalance = sortedAsc.map(h => {
+    running += h.amount;
+    running = Math.max(0, running);
+    return { ...h, balance: running };
+  });
+  const total = running;
+  const historyDesc = [...withBalance].reverse();
+  return { historyDesc, total };
+};
+
 const MemberDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -499,6 +584,19 @@ const MemberDetail = () => {
     localStorage.setItem(`member_${memberId}_pointHistory`, JSON.stringify(memberPointHistory));
   }, [memberPointHistory, memberId]);
 
+  // 이력 amount 기준으로 잔액·총 보유 포인트를 항상 일치 (적립/사용/회수/만료성 차감 반영)
+  useLayoutEffect(() => {
+    const { historyDesc, total } = recalculatePointHistoryBalances(memberPointHistory);
+    const idOrderPrev = memberPointHistory.map(h => h.id).join('\0');
+    const idOrderNext = historyDesc.map(h => h.id).join('\0');
+    const balSigPrev = memberPointHistory.map(h => `${h.id}:${h.balance}`).join('|');
+    const balSigNext = historyDesc.map(h => `${h.id}:${h.balance}`).join('|');
+    if (idOrderPrev !== idOrderNext || balSigPrev !== balSigNext) {
+      setMemberPointHistory(historyDesc);
+    }
+    setMemberPoints(prev => (prev !== total ? total : prev));
+  }, [memberPointHistory]);
+
   useEffect(() => {
     localStorage.setItem(`member_${memberId}_attendance`, JSON.stringify(memberAttendance));
   }, [memberAttendance, memberId]);
@@ -517,6 +615,36 @@ const MemberDetail = () => {
   };
 
   const productOptions = Object.keys(productPriceMap);
+
+  /** 배정 시 저장된 usedPoints 우선(0 포함). 값이 없을 때만 포인트 이력으로 추정(레거시) */
+  const getUsedPointsForProduct = (product: Product): number => {
+    if (product.usedPoints !== undefined) {
+      return product.usedPoints;
+    }
+    const byProductId = memberPointHistory.find(
+      h =>
+        h.type === 'use' &&
+        h.reason.includes(`[#${product.id}]`) &&
+        h.reason.includes('결제 사용')
+    );
+    if (byProductId) return Math.abs(byProductId.amount);
+    const loose = memberPointHistory.find(
+      h =>
+        h.type === 'use' &&
+        h.reason.includes(product.name) &&
+        h.reason.includes('결제 사용')
+    );
+    return loose ? Math.abs(loose.amount) : 0;
+  };
+
+  /** 구매 당시 실결제 금액 = 판매금액 − 사용 포인트 (= 배정 시 저장한 salePrice) */
+  const getNetPaymentAmountForProduct = (product: Product, usedPts: number): number => {
+    if (product.salePrice !== undefined && product.salePrice !== null) {
+      return product.salePrice;
+    }
+    const catalog = productPriceMap[product.name] || 0;
+    return Math.max(0, catalog - usedPts);
+  };
 
   const getPaymentLinkPills = (): string[] => {
     switch (paymentLinkTab) {
@@ -881,7 +1009,7 @@ const MemberDetail = () => {
         type: 'use',
         amount: -productForm.usePoints,
         balance: currentBalance,
-        reason: `${productForm.product} 결제 사용`,
+        reason: `${productForm.product} 결제 사용 [#${newProduct.id}]`,
         createdAt: dateTimeStr,
       });
     }
@@ -967,16 +1095,7 @@ const MemberDetail = () => {
     const startDate = product.startDate.replace(/\./g, '-');
     const endDate = product.endDate.replace(/\./g, '-');
 
-    let usedPoints = product.usedPoints || 0;
-
-    if (usedPoints === 0) {
-      const matchingHistory = memberPointHistory.find(
-        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
-      );
-      if (matchingHistory) {
-        usedPoints = Math.abs(matchingHistory.amount);
-      }
-    }
+    let usedPoints = getUsedPointsForProduct(product);
 
     const savedSalePrice = product.salePrice !== undefined ? product.salePrice : Math.max(0, price - usedPoints);
     const savedReceivedAmount = product.receivedAmount !== undefined ? product.receivedAmount : Math.max(0, price - usedPoints);
@@ -1066,7 +1185,7 @@ const MemberDetail = () => {
     if (!inlineGrantAmount || inlineGrantAmount <= 0 || !grantReason) return;
 
     const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const newBalance = memberPoints + inlineGrantAmount;
 
     setMemberPoints(newBalance);
@@ -1076,7 +1195,7 @@ const MemberDetail = () => {
       amount: inlineGrantAmount,
       balance: newBalance,
       reason: grantReason,
-      createdAt: dateStr,
+      createdAt: dateTimeStr,
     }, ...prev]);
 
     setShowInlineGrant(false);
@@ -1145,19 +1264,31 @@ const MemberDetail = () => {
     );
   };
 
-  const reclaimAutoGrantPoints = (product: Product, currentBalance: number, dateStr: string, reasonPrefix: string) => {
+  const reclaimAutoGrantPoints = (product: Product, currentBalance: number, dateTimeStr: string, reasonPrefix: string) => {
+    if (!getStoredReclaimAutoGrantOnMembershipCancel()) {
+      return { balance: currentBalance, entries: [] as PointHistory[] };
+    }
     const autoGrant = findAutoGrantForProduct(product);
     if (!autoGrant) return { balance: currentBalance, entries: [] as PointHistory[] };
 
-    const reclaimAmount = autoGrant.amount;
-    const newBalance = Math.max(0, currentBalance - reclaimAmount);
+    const requestedReclaim = autoGrant.amount;
+    const available = Math.max(0, currentBalance);
+    const actualReclaim = Math.min(requestedReclaim, available);
+    if (actualReclaim <= 0) {
+      return { balance: currentBalance, entries: [] as PointHistory[] };
+    }
+    const newBalance = currentBalance - actualReclaim;
+    const reason =
+      actualReclaim < requestedReclaim
+        ? `${reasonPrefix} 자동 지급 포인트 회수 (보유 ${available.toLocaleString()}P 중 ${actualReclaim.toLocaleString()}P 차감)`
+        : `${reasonPrefix} 자동 지급 포인트 회수`;
     const entry: PointHistory = {
       id: `ph${Date.now() + 2}`,
       type: 'use',
-      amount: -reclaimAmount,
+      amount: -actualReclaim,
       balance: newBalance,
-      reason: `${reasonPrefix} 자동 지급 포인트 회수`,
-      createdAt: dateStr,
+      reason,
+      createdAt: dateTimeStr,
     };
     return { balance: newBalance, entries: [entry] };
   };
@@ -1168,23 +1299,18 @@ const MemberDetail = () => {
     const product = memberProducts.find(p => p.id === refundProductId);
     if (!product) return;
 
-    let usedPoints = product.usedPoints || 0;
-    if (usedPoints === 0) {
-      const matchingHistory = memberPointHistory.find(
-        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
-      );
-      if (matchingHistory) {
-        usedPoints = Math.abs(matchingHistory.amount);
-      }
-    }
+    const usedPoints = getUsedPointsForProduct(product);
 
     const refundCash = Math.max(0, Math.floor(Number(refundAmount)) || 0);
-    /** 1원=1P 기준: 환불금액이 사용 포인트보다 작으면 그 금액만 포인트 환급, 크거나 같으면 사용 포인트 전액 환급 */
+    const refundMode = getStoredMembershipRefundMode();
+    /** 포인트 우선 환급: 1원=1P로 부분 환불 금액만큼 포인트 환급. 현금만 환불 모드에서는 포인트 미환급 */
     const pointsToReturn =
-      usedPoints > 0 ? Math.min(usedPoints, refundCash) : 0;
+      refundMode === 'cash_only' || usedPoints <= 0
+        ? 0
+        : Math.min(usedPoints, refundCash);
 
     const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     let currentBalance = memberPoints;
     const newEntries: PointHistory[] = [];
 
@@ -1199,11 +1325,11 @@ const MemberDetail = () => {
           pointsToReturn < usedPoints
             ? `회원권 환불 (포인트 부분 환급 ${pointsToReturn.toLocaleString()}P)`
             : '회원권 환불',
-        createdAt: dateStr,
+        createdAt: dateTimeStr,
       });
     }
 
-    const reclaim = reclaimAutoGrantPoints(product, currentBalance, dateStr, '회원권 환불');
+    const reclaim = reclaimAutoGrantPoints(product, currentBalance, dateTimeStr, '회원권 환불');
     currentBalance = reclaim.balance;
     newEntries.push(...reclaim.entries);
 
@@ -1221,18 +1347,10 @@ const MemberDetail = () => {
     const product = memberProducts.find(p => p.id === productId);
     if (!product) return;
 
-    let usedPoints = product.usedPoints || 0;
-    if (usedPoints === 0) {
-      const matchingHistory = memberPointHistory.find(
-        h => h.type === 'use' && h.reason.includes(product.name) && h.reason.includes('결제 사용')
-      );
-      if (matchingHistory) {
-        usedPoints = Math.abs(matchingHistory.amount);
-      }
-    }
+    const usedPoints = getUsedPointsForProduct(product);
 
     const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const dateTimeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     let currentBalance = memberPoints;
     const newEntries: PointHistory[] = [];
 
@@ -1244,11 +1362,11 @@ const MemberDetail = () => {
         amount: usedPoints,
         balance: currentBalance,
         reason: `${product.name} 결제취소 포인트 반환`,
-        createdAt: dateStr,
+        createdAt: dateTimeStr,
       });
     }
 
-    const reclaim = reclaimAutoGrantPoints(product, currentBalance, dateStr, `${product.name} 결제취소`);
+    const reclaim = reclaimAutoGrantPoints(product, currentBalance, dateTimeStr, `${product.name} 결제취소`);
     currentBalance = reclaim.balance;
     newEntries.push(...reclaim.entries);
 
@@ -1862,6 +1980,9 @@ const MemberDetail = () => {
                   {productForm.usePoints > member.point && (
                     <span className="point-error">보유 포인트를 초과할 수 없습니다.</span>
                   )}
+                  <p className="assign-reclaim-cap-hint">
+                    환불·결제취소 시 자동 지급분을 회수할 때도 보유 포인트 범위에서만 차감되며, 마이너스 잔액은 되지 않습니다.
+                  </p>
                 </div>
               )}
 
@@ -2008,7 +2129,7 @@ const MemberDetail = () => {
                           {history.type === 'earn' ? '지급' : '사용'}
                         </span>
                         <div className="history-info">
-                          <span className="history-reason">{history.reason}</span>
+                          <span className="history-reason">{displayPointHistoryReason(history.reason)}</span>
                           <span className="history-date">{history.createdAt.split(' ')[0]}</span>
                         </div>
                       </div>
@@ -2033,19 +2154,10 @@ const MemberDetail = () => {
       {showRefundModal && refundProductId && (() => {
         const refundProduct = memberProducts.find(p => p.id === refundProductId);
         if (!refundProduct) return null;
-        
-        const productPrice = refundProduct.salePrice !== undefined 
-          ? refundProduct.salePrice 
-          : (productPriceMap[refundProduct.name] || 0);
-        let usedPoints = refundProduct.usedPoints || 0;
-        if (usedPoints === 0) {
-          const mh = memberPointHistory.find(
-            h => h.type === 'use' && h.reason.includes(refundProduct.name) && h.reason.includes('결제 사용')
-          );
-          if (mh) usedPoints = Math.abs(mh.amount);
-        }
-        const totalPaid = productPrice + usedPoints;
-        
+
+        const usedPoints = getUsedPointsForProduct(refundProduct);
+        const netTotalPayment = getNetPaymentAmountForProduct(refundProduct, usedPoints);
+
         const allRefundProducts = memberProducts.filter(p => 
           p.startDate === refundProduct.startDate && p.isActive
         );
@@ -2056,8 +2168,20 @@ const MemberDetail = () => {
         }, 0);
 
         const refundCashForPoints = Math.max(0, Math.floor(Number(refundAmount)) || 0);
+        const membershipRefundMode = getStoredMembershipRefundMode();
         const plannedPointReturn =
-          usedPoints > 0 ? Math.min(usedPoints, refundCashForPoints) : 0;
+          membershipRefundMode === 'cash_only' || usedPoints <= 0
+            ? 0
+            : Math.min(usedPoints, refundCashForPoints);
+
+        const reclaimEnabled = getStoredReclaimAutoGrantOnMembershipCancel();
+        const autoGrantForRefund = findAutoGrantForProduct(refundProduct);
+        const reclaimTargetAmount = autoGrantForRefund?.amount ?? 0;
+        const balanceAfterPointReturn = memberPoints + plannedPointReturn;
+        const plannedAutoReclaim =
+          reclaimEnabled && reclaimTargetAmount > 0
+            ? Math.min(reclaimTargetAmount, Math.max(0, balanceAfterPointReturn))
+            : 0;
 
         const _checkedProducts = allRefundProducts.filter(p => refundChecked[p.id]);
         void _checkedProducts;
@@ -2170,29 +2294,58 @@ const MemberDetail = () => {
                 </div>
 
                 <div className="refund-right">
+                  <div className={`refund-policy-banner ${membershipRefundMode}`}>
+                    <span className="refund-policy-badge">
+                      {membershipRefundMode === 'cash_only'
+                        ? '환불 정책: 실결제 금액만'
+                        : '환불 정책: 포인트 우선 환급'}
+                    </span>
+                    <p className="refund-policy-text">
+                      {membershipRefundMode === 'cash_only'
+                        ? '설정에 따라 사용 포인트는 환급하지 않으며, 배정 당시 실제 결제 금액 범위에서만 환불합니다.'
+                        : '사용 포인트는 입력 환불 금액과 비교해 환급되며, 부분 환불 금액이 포인트보다 적으면 그 금액만큼만 포인트가 돌아갑니다.'}
+                    </p>
+                  </div>
                   <div className="refund-summary-card">
                     <div className="refund-summary-row">
                       <span className="refund-summary-label">총 결제금액</span>
-                      <span className="refund-summary-value">{totalPaid.toLocaleString()}원</span>
+                      <span className="refund-summary-value">{netTotalPayment.toLocaleString()}원</span>
                     </div>
                   </div>
-                  {usedPoints > 0 && (
-                    <div className="refund-summary-card">
-                      <div className="refund-summary-row">
-                        <span className="refund-summary-label">사용 포인트</span>
-                        <span className="refund-summary-value">{usedPoints.toLocaleString()}P</span>
-                      </div>
+                  <div className="refund-summary-card">
+                    <div className="refund-summary-row">
+                      <span className="refund-summary-label">사용 포인트</span>
+                      <span className="refund-summary-value">{usedPoints.toLocaleString()}P</span>
                     </div>
-                  )}
-                  {usedPoints > 0 && (
+                  </div>
+                  <div className="refund-summary-card">
+                    <div className="refund-summary-row">
+                      <span className="refund-summary-label">포인트 환급 예정</span>
+                      <span className="refund-summary-value">{plannedPointReturn.toLocaleString()}P</span>
+                    </div>
+                    {membershipRefundMode === 'cash_only' && usedPoints > 0 && (
+                      <p className="refund-point-hint">
+                        포인트 메뉴 정책 설정에서「실제 결제 금액만 환불」이 선택되어 있어, 이번 환불에서는 사용 포인트가 반환되지 않습니다.
+                      </p>
+                    )}
+                    {membershipRefundMode === 'points_first' &&
+                      usedPoints > 0 &&
+                      refundCashForPoints > 0 &&
+                      refundCashForPoints < usedPoints && (
+                      <p className="refund-point-hint">
+                        환불 금액이 사용 포인트보다 적어, 입력한 환불 금액만큼만 포인트가 돌아갑니다.
+                      </p>
+                    )}
+                  </div>
+                  {reclaimEnabled && reclaimTargetAmount > 0 && (
                     <div className="refund-summary-card">
                       <div className="refund-summary-row">
-                        <span className="refund-summary-label">포인트 환급 예정</span>
-                        <span className="refund-summary-value">{plannedPointReturn.toLocaleString()}P</span>
+                        <span className="refund-summary-label">자동 지급 포인트 회수 예정</span>
+                        <span className="refund-summary-value">{plannedAutoReclaim.toLocaleString()}P</span>
                       </div>
-                      {refundCashForPoints < usedPoints && (
+                      {plannedAutoReclaim < reclaimTargetAmount && (
                         <p className="refund-point-hint">
-                          환불 금액이 사용 포인트보다 적어, 입력한 환불 금액만큼만 포인트가 돌아갑니다.
+                          회수분({reclaimTargetAmount.toLocaleString()}P)보다 환불 직전 보유·환급 반영 금액이 적으면 <strong>보유 한도까지만</strong> 차감되며, 잔액은 0P 아래로 내려가지 않습니다.
                         </p>
                       )}
                     </div>

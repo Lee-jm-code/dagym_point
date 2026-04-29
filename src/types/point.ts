@@ -52,6 +52,11 @@ export interface PointTransaction {
   createdAt: string;
 }
 
+/** 회원권 환불 시 배정 사용 포인트 처리 방식 */
+export type MembershipRefundMode =
+  | 'points_first' /** 사용 포인트 우선 환급 + 부분 환불 금액 연동 */
+  | 'cash_only'; /** 실제 결제(카드·현금) 분만 환불, 포인트는 환급하지 않음 */
+
 // 포인트 정책 설정
 export interface PointPolicy {
   expirationMonths: number;
@@ -63,6 +68,13 @@ export interface PointPolicy {
     locker: boolean;
     etc: boolean;
   };
+  /** 회원권 환불 시 포인트 환급 정책 (기본: 포인트 우선 환급) */
+  membershipRefundMode: MembershipRefundMode;
+  /**
+   * true: 환불·상품삭제(결제취소) 시 해당 배정과 연관된 신규/재등록 자동 지급 포인트 회수(회원 당시 보유 한도까지만, 잔액 음수 없음)
+   * false: 자동 지급분은 회수하지 않음
+   */
+  reclaimAutoGrantOnMembershipCancel: boolean;
 }
 
 // 회원 필터

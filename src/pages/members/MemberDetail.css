@@ -813,6 +813,13 @@
   margin-top: 8px;
 }
 
+.assign-reclaim-cap-hint {
+  margin: 12px 0 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
 .add-payment-btn {
   width: 100%;
   padding: 14px;
@@ -1371,6 +1378,38 @@
   font-size: 12px;
   line-height: 1.45;
   color: #6b7280;
+}
+
+.refund-policy-banner {
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 4px;
+  border: 1px solid #e0e7ff;
+  background: #f5f7ff;
+}
+
+.refund-policy-banner.cash_only {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.refund-policy-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4338ca;
+  margin-bottom: 8px;
+}
+
+.refund-policy-banner.cash_only .refund-policy-badge {
+  color: #b91c1c;
+}
+
+.refund-policy-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #4b5563;
 }
 
 .refund-modal-footer {

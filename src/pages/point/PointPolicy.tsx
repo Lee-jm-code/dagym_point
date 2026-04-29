@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Calendar, ShoppingBag, Save, CheckCircle } from 'lucide-react';
-import type { PointPolicy as PointPolicyType } from '../../types/point';
+import { Calendar, ShoppingBag, Save, CheckCircle, RefreshCw } from 'lucide-react';
+import type { MembershipRefundMode, PointPolicy as PointPolicyType } from '../../types/point';
 import './PointPolicy.css';
 
 const STORAGE_KEY = 'point_policy';
@@ -15,13 +15,31 @@ const initialPolicy: PointPolicyType = {
     locker: true,
     etc: false,
   },
+  membershipRefundMode: 'points_first',
+  reclaimAutoGrantOnMembershipCancel: true,
 };
+
+const parseStoredMembershipRefundMode = (raw: unknown): MembershipRefundMode =>
+  raw === 'cash_only' ? 'cash_only' : 'points_first';
 
 const loadStoredPolicy = (): PointPolicyType => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      return {
+        ...initialPolicy,
+        ...parsed,
+        usableProducts: {
+          ...initialPolicy.usableProducts,
+          ...(parsed.usableProducts || {}),
+        },
+        membershipRefundMode: parseStoredMembershipRefundMode(parsed.membershipRefundMode),
+        reclaimAutoGrantOnMembershipCancel:
+          typeof parsed.reclaimAutoGrantOnMembershipCancel === 'boolean'
+            ? parsed.reclaimAutoGrantOnMembershipCancel
+            : true,
+      };
     }
   } catch (e) {
     console.error('Failed to load policy from localStorage:', e);
@@ -54,9 +72,14 @@ const PointPolicy = () => {
       return;
     }
     
-    const policyToSave = {
+    const policyToSave: PointPolicyType = {
       ...policy,
-      expirationMonths: numValue
+      expirationMonths: numValue,
+      membershipRefundMode: parseStoredMembershipRefundMode(policy.membershipRefundMode),
+      reclaimAutoGrantOnMembershipCancel:
+        typeof policy.reclaimAutoGrantOnMembershipCancel === 'boolean'
+          ? policy.reclaimAutoGrantOnMembershipCancel
+          : true,
     };
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(policyToSave));
@@ -99,12 +122,16 @@ const PointPolicy = () => {
     });
   };
 
+  const setMembershipRefundMode = (mode: MembershipRefundMode) => {
+    setPolicy({ ...policy, membershipRefundMode: mode });
+  };
+
   return (
     <div className="point-policy">
       <div className="page-header">
         <h1 className="page-title">정책 설정</h1>
         <p className="page-description">
-          포인트 유효기간 및 사용 제한 정책을 설정합니다.
+          포인트 유효기간, 사용 제한, 회원권 환불 시 포인트 정책을 설정합니다.
         </p>
       </div>
 
@@ -210,6 +237,108 @@ const PointPolicy = () => {
               </div>
               <p className="form-hint">
                 0으로 설정 시 제한 없이 사용 가능합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 회원권 환불·취소 시 포인트 정책 (사용 포인트 + 자동 지급 통합) */}
+        <div className="policy-card full-width policy-card-refund-unified">
+          <div className="card-header refund-unified-header">
+            <div className="card-icon purple-muted">
+              <RefreshCw size={24} />
+            </div>
+            <div className="refund-unified-header-text">
+              <h3 className="card-title">회원권 환불·취소 시 포인트 정책</h3>
+              <p className="card-subtitle">
+                회원권을 배정할 때 <strong>포인트를 사용</strong>했거나 <strong>신규·재등록 자동 지급</strong>을 받은 경우,
+                나중에 그 회원권을 환불하거나 상품을 삭제(결제취소)할 때 포인트를 어떻게 처리할지 한곳에서 설정합니다.
+              </p>
+            </div>
+          </div>
+          <div className="card-body refund-unified-body">
+            <div className="refund-unified-lead">
+              아래 두 항목은 동일한 환불·취소 건에 차례로 적용됩니다. (① 회원이 결제에 사용한 포인트 → ② 배정 시 자동으로 받은 포인트)
+            </div>
+
+            <div className="refund-unified-section">
+              <div className="refund-unified-section-head">
+                <span className="refund-unified-badge">① 사용 포인트</span>
+                <span className="refund-unified-section-title">배정 시 상품 결제에 사용한 포인트</span>
+              </div>
+              <p className="refund-unified-section-desc">
+                환불 시 그 포인트를 회원에게 되돌려줄지, 아니면 실제 카드·현금으로 낸 금액만 환불할지 선택합니다.
+              </p>
+              <div className="refund-mode-options">
+                <label className="radio-item">
+                  <input
+                    type="radio"
+                    name="membershipRefundMode"
+                    checked={policy.membershipRefundMode === 'points_first'}
+                    onChange={() => setMembershipRefundMode('points_first')}
+                  />
+                  <span className="radio-custom" />
+                  <div className="radio-content">
+                    <span className="radio-label">포인트 우선 환급 (부분 환불 금액과 연동)</span>
+                    <span className="radio-desc">
+                      사용 포인트를 우선 되돌리며, 입력한 환불 금액에 맞춰 부분 환불 시 되돌리는 포인트도 조정됩니다.
+                    </span>
+                  </div>
+                </label>
+                <label className="radio-item">
+                  <input
+                    type="radio"
+                    name="membershipRefundMode"
+                    checked={policy.membershipRefundMode === 'cash_only'}
+                    onChange={() => setMembershipRefundMode('cash_only')}
+                  />
+                  <span className="radio-custom" />
+                  <div className="radio-content">
+                    <span className="radio-label">실제 결제 금액만 환불 (사용 포인트는 환급 안 함)</span>
+                    <span className="radio-desc">
+                      사용 포인트는 되돌리지 않고, 판매금액에서 포인트를 뺀 실제 결제 금액 범위에서만 환불합니다.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="refund-unified-divider" aria-hidden />
+
+            <div className="refund-unified-section">
+              <div className="refund-unified-section-head">
+                <span className="refund-unified-badge badge-amber">② 자동 지급 포인트</span>
+                <span className="refund-unified-section-title">신규 등록·재등록 등 배정 시 자동 지급분</span>
+              </div>
+              <p className="refund-unified-section-desc">
+                자동 지급 기능이 켜져 있어 배정과 함께 포인트가 들어온 경우, 환불·취소 때 그 지급분을 회수할지 정합니다.
+              </p>
+              <div className="policy-toggle-card">
+                <div className="policy-toggle-labels">
+                  <span className="policy-toggle-title">환불·결제취소 시 자동 지급 포인트 회수</span>
+                  <span className="policy-toggle-summary">
+                    {policy.reclaimAutoGrantOnMembershipCancel
+                      ? '켜짐 — 해당 배정으로 받은 신규·재등록 자동 지급 포인트를 되찾습니다. (보유 한도까지만 차감, 마이너스 없음)'
+                      : '꺼짐 — 자동 지급 포인트는 회수하지 않고 회원에게 유지합니다.'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={`policy-toggle-switch ${policy.reclaimAutoGrantOnMembershipCancel ? 'on' : ''}`}
+                  role="switch"
+                  aria-checked={policy.reclaimAutoGrantOnMembershipCancel}
+                  onClick={() =>
+                    setPolicy(prev => ({
+                      ...prev,
+                      reclaimAutoGrantOnMembershipCancel: !prev.reclaimAutoGrantOnMembershipCancel,
+                    }))
+                  }
+                >
+                  <span className="policy-toggle-knob" />
+                </button>
+              </div>
+              <p className="refund-unified-reclaim-cap-hint">
+                회수액이 당시 보유 포인트보다 크면 잔액이 음수가 되지 않으며, <strong>보유 범위에서만</strong> 차감됩니다.
               </p>
             </div>
           </div>
